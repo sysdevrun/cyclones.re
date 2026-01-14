@@ -1,0 +1,24 @@
+{
+  "name": "meteo-cyclone-animation",
+  "version": "1.0.0",
+  "description": "Weather image archiver that fetches cyclone trajectory images from Meteo France",
+  "main": "fetch_image.ts",
+  "scripts": {
+    "fetch": "tsx fetch_image.ts",
+    "dev": "tsx watch fetch_image.ts"
+  },
+  "keywords": [
+    "weather",
+    "cyclone",
+    "meteo",
+    "animation",
+    "archiver"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}

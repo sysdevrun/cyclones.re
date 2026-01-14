@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meteo Cyclone Animation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            max-width: 900px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+
+        .viewer {
+            text-align: center;
+        }
+
+        #imageContainer {
+            position: relative;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #imageDisplay {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        #dateDisplay {
+            font-size: 1.2em;
+            color: #555;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .loading {
+            color: #667eea;
+            font-size: 1.1em;
+        }
+
+        .controls {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            font-weight: 600;
+            color: #333;
+            min-width: 120px;
+        }
+
+        input[type="number"],
+        input[type="range"] {
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        input[type="number"] {
+            width: 80px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        input[type="number"]:focus,
+        input[type="range"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 1em;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+        }
+
+        #playPauseBtn {
+            background: #28a745;
+        }
+
+        #playPauseBtn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+
+        #restartBtn {
+            background: #007bff;
+        }
+
+        #restartBtn:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+        }
+
+        #loopBtn {
+            background: #6c757d;
+        }
+
+        #loopBtn.active {
+            background: #ffc107;
+        }
+
+        #loopBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+        }
+
+        #loopBtn.active:hover {
+            background: #e0a800;
+        }
+
+        .speed-display {
+            color: #667eea;
+            font-weight: 600;
+            min-width: 60px;
+            text-align: right;
+        }
+
+        .info {
+            text-align: center;
+            margin-top: 15px;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .error {
+            color: #dc3545;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌀 Meteo Cyclone Animation</h1>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="daysInput">Days to display:</label>
+                <input type="number" id="daysInput" min="1" max="30" value="3">
+                <button onclick="loadImages()" style="background: #17a2b8; padding: 8px 16px;">Reload</button>
+            </div>
+
+            <div class="control-group">
+                <label for="speedSlider">Animation speed:</label>
+                <input type="range" id="speedSlider" min="100" max="2000" step="100" value="500">
+                <span class="speed-display"><span id="speedDisplay">500</span> ms</span>
+            </div>
+        </div>
+
+        <div class="viewer">
+            <div id="imageContainer">
+                <div class="loading">Loading images...</div>
+            </div>
+            <div id="dateDisplay">-</div>
+
+            <div class="buttons">
+                <button id="playPauseBtn" onclick="togglePlayPause()">▶ Play</button>
+                <button id="restartBtn" onclick="restartAnimation()">↻ Restart</button>
+                <button id="loopBtn" onclick="toggleLoop()">∞ Loop: OFF</button>
+            </div>
+
+            <div class="info">
+                <p>Frame: <strong><span id="frameCounter">0</span> / <span id="totalFrames">0</span></strong></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let images = [];
+        let currentIndex = 0;
+        let isPlaying = false;
+        let isLooping = false;
+        let animationInterval = null;
+        let speed = 500;
+
+        const imageDisplay = document.getElementById('imageDisplay');
+        const dateDisplay = document.getElementById('dateDisplay');
+        const imageContainer = document.getElementById('imageContainer');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const loopBtn = document.getElementById('loopBtn');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedDisplay = document.getElementById('speedDisplay');
+        const daysInput = document.getElementById('daysInput');
+        const frameCounter = document.getElementById('frameCounter');
+        const totalFrames = document.getElementById('totalFrames');
+
+        // Load images from JSON
+        async function loadImages() {
+            try {
+                const days = parseInt(daysInput.value) || 3;
+                const response = await fetch('images.json');
+
+                if (!response.ok) {
+                    throw new Error('Failed to load images.json');
+                }
+
+                const allImages = await response.json();
+
+                // Filter images from last X days
+                const cutoffTime = Date.now() / 1000 - (days * 24 * 60 * 60);
+                images = allImages.filter(img => img.timestamp >= cutoffTime);
+
+                if (images.length === 0) {
+                    imageContainer.innerHTML = '<div class="error">No images found for the last ' + days + ' days</div>';
+                    return;
+                }
+
+                totalFrames.textContent = images.length;
+                currentIndex = 0;
+                displayImage(currentIndex);
+
+                // Auto-start animation
+                if (images.length > 1 && !isPlaying) {
+                    togglePlayPause();
+                }
+
+            } catch (error) {
+                console.error('Error loading images:', error);
+                imageContainer.innerHTML = '<div class="error">Error: ' + error.message + '</div>';
+            }
+        }
+
+        // Display specific image
+        function displayImage(index) {
+            if (images.length === 0) return;
+
+            const image = images[index];
+
+            // Create or update image element
+            if (!imageDisplay.src) {
+                const img = document.createElement('img');
+                img.id = 'imageDisplay';
+                img.alt = 'Cyclone trajectory';
+                imageContainer.innerHTML = '';
+                imageContainer.appendChild(img);
+            }
+
+            const img = document.getElementById('imageDisplay');
+            img.src = image.path;
+            dateDisplay.textContent = image.date;
+            frameCounter.textContent = index + 1;
+        }
+
+        // Animation loop
+        function animate() {
+            if (!isPlaying) return;
+
+            currentIndex++;
+
+            if (currentIndex >= images.length) {
+                if (isLooping) {
+                    currentIndex = 0;
+                } else {
+                    stopAnimation();
+                    return;
+                }
+            }
+
+            displayImage(currentIndex);
+        }
+
+        // Start animation
+        function startAnimation() {
+            if (images.length === 0) return;
+
+            isPlaying = true;
+            playPauseBtn.innerHTML = '⏸ Pause';
+            animationInterval = setInterval(animate, speed);
+        }
+
+        // Stop animation
+        function stopAnimation() {
+            isPlaying = false;
+            playPauseBtn.innerHTML = '▶ Play';
+            if (animationInterval) {
+                clearInterval(animationInterval);
+                animationInterval = null;
+            }
+        }
+
+        // Toggle play/pause
+        function togglePlayPause() {
+            if (isPlaying) {
+                stopAnimation();
+            } else {
+                startAnimation();
+            }
+        }
+
+        // Restart animation from beginning
+        function restartAnimation() {
+            currentIndex = 0;
+            displayImage(currentIndex);
+
+            if (!isPlaying) {
+                startAnimation();
+            }
+        }
+
+        // Toggle loop mode
+        function toggleLoop() {
+            isLooping = !isLooping;
+            loopBtn.textContent = '∞ Loop: ' + (isLooping ? 'ON' : 'OFF');
+            loopBtn.classList.toggle('active');
+        }
+
+        // Update speed
+        speedSlider.addEventListener('input', (e) => {
+            speed = parseInt(e.target.value);
+            speedDisplay.textContent = speed;
+
+            // Restart interval with new speed if playing
+            if (isPlaying) {
+                clearInterval(animationInterval);
+                animationInterval = setInterval(animate, speed);
+            }
+        });
+
+        // Initialize
+        loadImages();
+    </script>
+</body>
+</html>
