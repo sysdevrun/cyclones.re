@@ -9,6 +9,7 @@ A TypeScript-based weather image archiver that fetches cyclone trajectory images
 - Generates JSON index of all images with metadata
 - Beautiful web interface for viewing animations
 - No compilation step required - runs directly with tsx
+- **Cloud-native**: Deploy to Google Cloud Platform with GitHub Actions
 - Configurable animation settings:
   - Number of days to display (default: 3)
   - Animation speed (100ms - 2000ms)
@@ -16,14 +17,37 @@ A TypeScript-based weather image archiver that fetches cyclone trajectory images
   - Play/Pause controls
   - Restart from beginning
 
+## Deployment Options
+
+### ☁️ Google Cloud Platform (Recommended)
+
+Deploy automatically to GCP with GitHub Actions. Images stored in Cloud Storage, fetch job runs hourly via Cloud Scheduler.
+
+**See [GCP_SETUP.md](./GCP_SETUP.md) for complete deployment instructions.**
+
+Quick setup:
+1. Configure GCP project and GitHub secrets
+2. Push to `main` branch
+3. GitHub Actions handles everything automatically
+
+### 🖥️ Local/Server Installation
+
+Run on your own Linux server with cron.
+
 ## Requirements
 
+### For GCP Deployment
+- GCP account with billing enabled
+- GitHub repository
+- See [GCP_SETUP.md](./GCP_SETUP.md)
+
+### For Local Installation
 - Node.js (v18 or higher)
 - tsx (TypeScript Execute)
 - cron
 - A web server (or Python's http.server for local testing)
 
-## Installation
+## Local Installation
 
 1. Clone this repository:
    ```bash
