@@ -2,8 +2,10 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import * as https from 'https';
-import * as http from 'http';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+
+const execFileAsync = promisify(execFile);
 
 // Configuration
 const IMAGE_URL = 'http://www.meteo.fr/temps/domtom/La_Reunion/webcmrs9.0/francais/tpsreel/trajectoire.png';
@@ -23,31 +25,16 @@ function ensureDir(dirPath: string): void {
   }
 }
 
-// Download file from URL
-function downloadFile(url: string, destPath: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const protocol = url.startsWith('https') ? https : http;
-
-    protocol.get(url, (response) => {
-      if (response.statusCode !== 200) {
-        reject(new Error(`Failed to download: HTTP ${response.statusCode}`));
-        return;
-      }
-
-      const fileStream = fs.createWriteStream(destPath);
-      response.pipe(fileStream);
-
-      fileStream.on('finish', () => {
-        fileStream.close();
-        resolve();
-      });
-
-      fileStream.on('error', (err) => {
-        fs.unlinkSync(destPath);
-        reject(err);
-      });
-    }).on('error', reject);
-  });
+// Download file from URL using curl
+async function downloadFile(url: string, destPath: string): Promise<void> {
+  try {
+    await execFileAsync('curl', ['-f', '-s', '-o', destPath, url]);
+  } catch (error) {
+    if (fs.existsSync(destPath)) {
+      fs.unlinkSync(destPath);
+    }
+    throw new Error(`Failed to download: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 // Format date for display
