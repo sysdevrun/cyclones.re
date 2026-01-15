@@ -1,0 +1,30 @@
+server {
+	server_name cmrs.sys-dev-run.fr;
+
+	listen 80;
+	listen [::]:80;
+
+	return 301 https://$server_name$request_uri;
+}
+
+server {
+	server_name cmrs.sys-dev-run.fr;
+
+	listen 443 ssl http2;
+	listen [::]:443 ssl http2;
+
+	ssl_certificate /etc/nginx/tls/_.sys-dev-run.fr.crt;
+	ssl_certificate_key /etc/nginx/tls/_.sys-dev-run.fr.key;
+
+	root /home/chtitux/wd/meteo-cyclone-animation;
+
+	index index.html;
+	access_log /var/log/nginx/cmrs.sys-dev-run.fr_access.log;
+	error_log /var/log/nginx/cmrs.sys-dev-run.fr_error.log info;
+
+	add_header Strict-Transport-Security max-age=15768000;
+
+	# First attempt to serve request as file, then
+	# as directory, then fall back to displaying a 404.
+	try_files $uri $uri/ =404;
+}

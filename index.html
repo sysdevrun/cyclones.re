@@ -62,7 +62,7 @@
         #dateDisplay {
             font-size: 1.2em;
             color: #555;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             font-weight: 500;
         }
 
@@ -125,6 +125,7 @@
             gap: 10px;
             justify-content: center;
             flex-wrap: wrap;
+            margin-bottom: 10px;
         }
 
         button {
@@ -184,7 +185,7 @@
 
         .info {
             text-align: center;
-            margin-top: 15px;
+            margin: 10px 0;
             color: #666;
             font-size: 0.9em;
         }
@@ -214,11 +215,6 @@
         </div>
 
         <div class="viewer">
-            <div id="imageContainer">
-                <div class="loading">Loading images...</div>
-            </div>
-            <div id="dateDisplay">-</div>
-
             <div class="buttons">
                 <button id="playPauseBtn" onclick="togglePlayPause()">▶ Play</button>
                 <button id="restartBtn" onclick="restartAnimation()">↻ Restart</button>
@@ -227,6 +223,11 @@
 
             <div class="info">
                 <p>Frame: <strong><span id="frameCounter">0</span> / <span id="totalFrames">0</span></strong></p>
+            </div>
+
+            <div id="dateDisplay">-</div>
+            <div id="imageContainer">
+                <div class="loading">Loading images...</div>
             </div>
         </div>
     </div>
@@ -293,15 +294,15 @@
             const image = images[index];
 
             // Create or update image element
-            if (!imageDisplay.src) {
-                const img = document.createElement('img');
+            let img = document.getElementById('imageDisplay');
+            if (!img) {
+                img = document.createElement('img');
                 img.id = 'imageDisplay';
                 img.alt = 'Cyclone trajectory';
                 imageContainer.innerHTML = '';
                 imageContainer.appendChild(img);
             }
 
-            const img = document.getElementById('imageDisplay');
             img.src = image.path;
             dateDisplay.textContent = image.date;
             frameCounter.textContent = index + 1;
