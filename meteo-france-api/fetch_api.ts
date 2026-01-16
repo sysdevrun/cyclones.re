@@ -3,30 +3,21 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
-import { createClient, CycloneListResponse, CycloneTrajectoryResponse } from './src/index.js';
+import {
+  createClient,
+  CycloneListResponse,
+  CycloneTrajectoryResponse,
+  CycloneReport,
+  FetchSnapshot,
+  ApiData,
+} from './src/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Configuration
-const BASE_DIR = path.join(__dirname, 'data');
 const JSON_FILE = path.join(__dirname, 'api_data.json');
+const DATA_DIR = path.join(__dirname, 'data');
 const BASIN = 'SWI';
-
-interface ApiDataMetadata {
-  path: string;
-  type: 'cyclone_list' | 'cyclone_trajectory';
-  date: string;
-  timestamp: number;
-  cyclone_id?: string;
-  cyclone_name?: string;
-}
-
-// Ensure directory exists
-function ensureDir(dirPath: string): void {
-  if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, { recursive: true });
-  }
-}
 
 // Get current cyclone season (July to June cycle)
 function getCurrentSeason(): string {
@@ -54,131 +45,90 @@ function formatDate(date: Date): string {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
-// Get all JSON files recursively
-function getJsonFiles(dir: string): ApiDataMetadata[] {
-  const files: ApiDataMetadata[] = [];
+// Create directory path from date
+function getDateDir(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
 
-  if (!fs.existsSync(dir)) {
-    return files;
-  }
+  return path.join(DATA_DIR, `${year}-${month}-${day}`, `${hours}-${minutes}-${seconds}`);
+}
 
-  function walkDir(currentPath: string): void {
-    const entries = fs.readdirSync(currentPath, { withFileTypes: true });
+// Sanitize cyclone ID for filename
+function sanitizeCycloneId(cycloneId: string): string {
+  return cycloneId.replace(/[$/]/g, '_');
+}
 
-    for (const entry of entries) {
-      const fullPath = path.join(currentPath, entry.name);
-
-      if (entry.isDirectory()) {
-        walkDir(fullPath);
-      } else if (entry.isFile() && entry.name.endsWith('.json')) {
-        const stats = fs.statSync(fullPath);
-        const relativePath = path.relative(BASE_DIR, fullPath);
-
-        // Parse metadata from path structure: YYYY-MM-DD/HH-MM-SS/type.json or cyclone_id.json
-        const parts = relativePath.split(path.sep);
-        const dateStr = parts[0]; // YYYY-MM-DD
-        const timeStr = parts[1]?.replace(/-/g, ':') || '00:00:00'; // HH:MM:SS
-        const filename = parts[2] || entry.name;
-
-        // Determine type and extract cyclone info
-        let type: 'cyclone_list' | 'cyclone_trajectory';
-        let cyclone_id: string | undefined;
-        let cyclone_name: string | undefined;
-
-        if (filename === 'cyclone_list.json') {
-          type = 'cyclone_list';
-        } else {
-          type = 'cyclone_trajectory';
-          // Try to read the file to get cyclone info
-          try {
-            const content = JSON.parse(fs.readFileSync(fullPath, 'utf-8')) as CycloneTrajectoryResponse;
-            cyclone_id = content.cyclone_trajectory.cyclone_id;
-            cyclone_name = content.cyclone_trajectory.cyclone_name;
-          } catch {
-            // If we can't read, extract from filename
-            cyclone_id = filename.replace('.json', '').replace(/_/g, '/');
-          }
-        }
-
-        files.push({
-          path: `data/${relativePath.replace(/\\/g, '/')}`,
-          type,
-          date: `${dateStr} ${timeStr}`,
-          timestamp: Math.floor(stats.mtimeMs / 1000),
-          cyclone_id,
-          cyclone_name,
-        });
-      }
+// Load existing api_data.json or create empty array
+function loadApiData(): ApiData {
+  if (fs.existsSync(JSON_FILE)) {
+    try {
+      const content = fs.readFileSync(JSON_FILE, 'utf-8');
+      return JSON.parse(content) as ApiData;
+    } catch {
+      console.warn('Warning: Could not parse existing api_data.json, starting fresh');
+      return [];
     }
   }
-
-  walkDir(dir);
-  return files;
+  return [];
 }
 
-// Generate JSON index
-function generateJSON(): void {
-  console.log('Generating JSON index...');
-
-  const files = getJsonFiles(BASE_DIR);
-
-  // Sort by timestamp
-  files.sort((a, b) => a.timestamp - b.timestamp);
-
-  fs.writeFileSync(JSON_FILE, JSON.stringify(files, null, 2));
-  console.log(`JSON index generated at ${JSON_FILE}`);
-  console.log(`Total API responses: ${files.length}`);
+// Save api_data.json
+function saveApiData(data: ApiData): void {
+  fs.writeFileSync(JSON_FILE, JSON.stringify(data, null, 2));
 }
 
-// Save JSON data to file
-function saveJson(filePath: string, data: unknown): void {
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+// Get relative path from __dirname
+function getRelativePath(absolutePath: string): string {
+  return path.relative(__dirname, absolutePath);
 }
 
 // Main function
 async function main(): Promise<void> {
   try {
-    // Create base directory
-    ensureDir(BASE_DIR);
-
-    // Get current date and time
     const now = new Date();
-    const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
-    const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
+    const timestamp = Math.floor(now.getTime() / 1000);
+    const dateStr = formatDate(now);
+    const dateDir = getDateDir(now);
 
-    // Create timestamped directory
-    const timeDir = path.join(BASE_DIR, dateStr, timeStr);
-    ensureDir(timeDir);
+    // Create directory for this run
+    fs.mkdirSync(dateDir, { recursive: true });
 
     // Initialize client
     const client = createClient();
     const season = getCurrentSeason();
 
     console.log(`Fetching cyclone data for basin ${BASIN}, season ${season}...`);
+    console.log(`Timestamp: ${dateStr}`);
+    console.log(`Output directory: ${dateDir}`);
 
     // Fetch cyclone list
-    console.log('1. Fetching cyclone list...');
-    const cycloneList = await client.listCyclones(BASIN, season as `${number}${number}${number}${number}${number}${number}${number}${number}`);
-
-    const listFile = path.join(timeDir, 'cyclone_list.json');
-    saveJson(listFile, cycloneList);
-    console.log(`   Saved cyclone list to ${listFile}`);
+    console.log('\n1. Fetching cyclone list...');
+    const cycloneList: CycloneListResponse = await client.listCyclones(
+      BASIN,
+      season as `${number}${number}${number}${number}${number}${number}${number}${number}`
+    );
 
     const cycloneIds = Object.keys(cycloneList.cyclone_list);
     console.log(`   Found ${cycloneIds.length} cyclone(s): ${cycloneIds.map(id => cycloneList.cyclone_list[id].cyclone_name).join(', ') || 'none'}`);
 
-    // Fetch trajectory for each cyclone
+    // Save cyclone list
+    const cycloneListFile = path.join(dateDir, 'cyclone_list.json');
+    fs.writeFileSync(cycloneListFile, JSON.stringify(cycloneList, null, 2));
+    console.log(`   Saved to ${getRelativePath(cycloneListFile)}`);
+
+    // Fetch and save trajectories for each cyclone
+    const trajectoryFiles: string[] = [];
+    let trajectoryIndex = 2;
+
     for (const cycloneId of cycloneIds) {
       const cyclone = cycloneList.cyclone_list[cycloneId];
-      console.log(`2. Fetching trajectory for ${cyclone.cyclone_name} (${cycloneId})...`);
+      console.log(`\n${trajectoryIndex}. Fetching trajectory for ${cyclone.cyclone_name} (${cycloneId})...`);
 
-      const trajectory = await client.getCycloneTrajectory(cycloneId);
-
-      // Sanitize cyclone ID for filename (replace / and $ with _)
-      const safeId = cycloneId.replace(/[/$]/g, '_');
-      const trajectoryFile = path.join(timeDir, `${safeId}.json`);
-      saveJson(trajectoryFile, trajectory);
-      console.log(`   Saved trajectory to ${trajectoryFile}`);
+      const trajectory: CycloneTrajectoryResponse = await client.getCycloneTrajectory(cycloneId);
 
       const analysisCount = trajectory.cyclone_trajectory.features.filter(
         f => f.properties.data_type === 'analysis'
@@ -187,11 +137,54 @@ async function main(): Promise<void> {
         f => f.properties.data_type === 'forecast'
       ).length;
       console.log(`   Features: ${analysisCount} analysis, ${forecastCount} forecast`);
+
+      // Save trajectory
+      const trajectoryFile = path.join(dateDir, `trajectory_${sanitizeCycloneId(cycloneId)}.json`);
+      fs.writeFileSync(trajectoryFile, JSON.stringify(trajectory, null, 2));
+      trajectoryFiles.push(getRelativePath(trajectoryFile));
+      console.log(`   Saved to ${getRelativePath(trajectoryFile)}`);
+
+      trajectoryIndex++;
     }
 
-    // Generate JSON index
-    generateJSON();
+    // Fetch report
+    console.log(`\n${trajectoryIndex}. Fetching cyclone activity report...`);
+    let reportFile: string | null = null;
+    try {
+      const report: CycloneReport = await client.getReport(BASIN);
+      console.log(`   Report title: ${report.report_title}`);
+      console.log(`   Updated: ${new Date(report.update_time * 1000).toLocaleString()}`);
 
+      // Save report
+      const reportPath = path.join(dateDir, 'report.json');
+      fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
+      reportFile = getRelativePath(reportPath);
+      console.log(`   Saved to ${reportFile}`);
+    } catch (error) {
+      console.warn(`   Warning: Could not fetch report: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    // Create snapshot metadata
+    const snapshot: FetchSnapshot = {
+      timestamp,
+      date: dateStr,
+      cyclone_list_file: getRelativePath(cycloneListFile),
+      trajectory_files: trajectoryFiles,
+      report_file: reportFile,
+    };
+
+    // Load existing data and append new snapshot
+    const apiData = loadApiData();
+    apiData.push(snapshot);
+
+    // Sort by timestamp
+    apiData.sort((a, b) => a.timestamp - b.timestamp);
+
+    // Save updated data
+    saveApiData(apiData);
+
+    console.log(`\nSnapshot metadata saved to ${JSON_FILE}`);
+    console.log(`Total snapshots: ${apiData.length}`);
     console.log('\nFetch completed successfully!');
 
   } catch (error) {

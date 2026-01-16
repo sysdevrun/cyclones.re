@@ -149,6 +149,35 @@ export interface CycloneTrajectoryResponse {
   cyclone_trajectory: CycloneTrajectory;
 }
 
+// ============ Report API Types ============
+
+export interface TextBlocItem {
+  bloc_title?: string;
+  text?: string;
+}
+
+export interface CycloneReport {
+  report_type: string;
+  report_subtype: string;
+  domain_id: string;
+  report_title: string;
+  update_time: number;
+  end_validity_time: number | null;
+  text_bloc_item: TextBlocItem[];
+}
+
+// ============ Fetch Snapshot Types ============
+
+export interface FetchSnapshot {
+  timestamp: number;
+  date: string;
+  cyclone_list_file: string;
+  trajectory_files: string[];
+  report_file: string | null;
+}
+
+export type ApiData = FetchSnapshot[];
+
 // ============ Type Guards ============
 
 export function isAnalysisFeature(feature: TrajectoryFeature): feature is AnalysisFeature {

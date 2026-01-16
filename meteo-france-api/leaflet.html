@@ -257,6 +257,50 @@
         .cyclone-info strong {
             color: #333;
         }
+
+        .report-section {
+            margin-top: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .report-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .report-content {
+            font-size: 0.95em;
+            line-height: 1.6;
+            color: #444;
+        }
+
+        .report-content .bloc-title {
+            font-weight: 700;
+            color: #333;
+            margin-top: 15px;
+            margin-bottom: 8px;
+        }
+
+        .report-content .text-line {
+            margin: 5px 0;
+        }
+
+        .report-content .separator {
+            border-top: 1px dashed #ccc;
+            margin: 15px 0;
+        }
+
+        .no-report {
+            color: #888;
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
+        }
     </style>
 </head>
 <body>
@@ -271,9 +315,9 @@
             </div>
 
             <div class="control-group">
-                <label for="trajectorySlider">Trajectory:</label>
-                <input type="range" id="trajectorySlider" min="0" max="0" step="1" value="0" disabled>
-                <span class="speed-display"><span id="trajectoryPosition">0</span> / <span id="trajectoryTotal">0</span></span>
+                <label for="snapshotSlider">Snapshot:</label>
+                <input type="range" id="snapshotSlider" min="0" max="0" step="1" value="0" disabled>
+                <span class="speed-display"><span id="snapshotPosition">0</span> / <span id="snapshotTotal">0</span></span>
             </div>
         </div>
 
@@ -297,11 +341,17 @@
                 </div>
             </div>
         </div>
+
+        <div class="report-section" id="reportSection" style="display: none;">
+            <h2>📋 Cyclone Activity Report</h2>
+            <div class="report-content" id="reportContent"></div>
+        </div>
     </div>
 
     <script>
         // State
-        let trajectories = [];
+        let snapshotMetadata = [];  // Metadata from api_data.json
+        let loadedSnapshots = {};   // Cache for loaded snapshot data
         let currentIndex = 0;
         let isPlaying = false;
         let isLooping = false;
@@ -324,11 +374,13 @@
         const speedDisplay = document.getElementById('speedDisplay');
         const frameCounter = document.getElementById('frameCounter');
         const totalFrames = document.getElementById('totalFrames');
-        const trajectorySlider = document.getElementById('trajectorySlider');
-        const trajectoryPosition = document.getElementById('trajectoryPosition');
-        const trajectoryTotal = document.getElementById('trajectoryTotal');
+        const snapshotSlider = document.getElementById('snapshotSlider');
+        const snapshotPosition = document.getElementById('snapshotPosition');
+        const snapshotTotal = document.getElementById('snapshotTotal');
         const loadingOverlay = document.getElementById('loadingOverlay');
         const loadingText = document.getElementById('loadingText');
+        const reportSection = document.getElementById('reportSection');
+        const reportContent = document.getElementById('reportContent');
 
         // Development stages color mapping
         const developmentColors = {
@@ -379,7 +431,7 @@
             legend.addTo(map);
         }
 
-        // Load trajectory data
+        // Load metadata from api_data.json
         async function loadData() {
             try {
                 loadingText.textContent = 'Loading metadata...';
@@ -389,61 +441,76 @@
                     throw new Error('Failed to load api_data.json');
                 }
 
-                const metadata = await response.json();
+                snapshotMetadata = await response.json();
 
-                // Filter only trajectory files
-                const trajectoryFiles = metadata.filter(item => item.type === 'cyclone_trajectory');
-
-                if (trajectoryFiles.length === 0) {
-                    throw new Error('No trajectory data found');
-                }
-
-                loadingText.textContent = `Loading trajectories (0/${trajectoryFiles.length})...`;
-
-                // Fetch all trajectory files
-                for (let i = 0; i < trajectoryFiles.length; i++) {
-                    const file = trajectoryFiles[i];
-                    loadingText.textContent = `Loading trajectories (${i + 1}/${trajectoryFiles.length})...`;
-
-                    const trajResponse = await fetch(file.path);
-                    if (trajResponse.ok) {
-                        const data = await trajResponse.json();
-                        trajectories.push({
-                            metadata: file,
-                            data: data.cyclone_trajectory
-                        });
-                    }
-                }
-
-                if (trajectories.length === 0) {
-                    throw new Error('Failed to load any trajectory data');
+                if (!Array.isArray(snapshotMetadata) || snapshotMetadata.length === 0) {
+                    throw new Error('No snapshot data found');
                 }
 
                 // Sort by timestamp
-                trajectories.sort((a, b) => a.metadata.timestamp - b.metadata.timestamp);
+                snapshotMetadata.sort((a, b) => a.timestamp - b.timestamp);
 
                 // Update UI
-                totalFrames.textContent = trajectories.length;
-                trajectoryTotal.textContent = trajectories.length;
-                trajectorySlider.max = trajectories.length - 1;
-                trajectorySlider.disabled = false;
+                totalFrames.textContent = snapshotMetadata.length;
+                snapshotTotal.textContent = snapshotMetadata.length;
+                snapshotSlider.max = snapshotMetadata.length - 1;
+                snapshotSlider.disabled = false;
                 playPauseBtn.disabled = false;
                 restartBtn.disabled = false;
 
                 // Hide loading overlay
                 loadingOverlay.style.display = 'none';
 
-                // Display first trajectory
-                displayTrajectory(0);
-
-                // Fit map to trajectory bounds
-                fitMapToTrajectory(trajectories[0].data);
+                // Display first snapshot
+                await displaySnapshot(0);
 
             } catch (error) {
                 console.error('Error loading data:', error);
                 loadingText.textContent = 'Error: ' + error.message;
                 loadingText.style.color = '#dc3545';
             }
+        }
+
+        // Fetch snapshot data from files
+        async function fetchSnapshotData(metadata) {
+            const cacheKey = metadata.timestamp;
+
+            // Return cached data if available
+            if (loadedSnapshots[cacheKey]) {
+                return loadedSnapshots[cacheKey];
+            }
+
+            // Fetch trajectories
+            const trajectories = [];
+            for (const trajectoryFile of metadata.trajectory_files) {
+                const response = await fetch(trajectoryFile);
+                if (response.ok) {
+                    const trajectory = await response.json();
+                    trajectories.push(trajectory);
+                }
+            }
+
+            // Fetch report if available
+            let report = null;
+            if (metadata.report_file) {
+                const response = await fetch(metadata.report_file);
+                if (response.ok) {
+                    report = await response.json();
+                }
+            }
+
+            // Create snapshot object
+            const snapshot = {
+                timestamp: metadata.timestamp,
+                date: metadata.date,
+                trajectories,
+                report
+            };
+
+            // Cache the loaded data
+            loadedSnapshots[cacheKey] = snapshot;
+
+            return snapshot;
         }
 
         // Fit map bounds to trajectory
@@ -502,13 +569,8 @@
             return content;
         }
 
-        // Display trajectory on map
-        function displayTrajectory(index) {
-            if (trajectories.length === 0) return;
-
-            const trajectory = trajectories[index];
-            const data = trajectory.data;
-
+        // Display a single trajectory on the map
+        function displayTrajectoryOnMap(trajectory) {
             // Clear existing layers
             analysisLayer.clearLayers();
             forecastLayer.clearLayers();
@@ -520,7 +582,7 @@
             const forecastPoints = [];
             let uncertaintyCone = null;
 
-            for (const feature of data.features) {
+            for (const feature of trajectory.features) {
                 const dataType = feature.properties.data_type;
 
                 if (dataType === 'analysis') {
@@ -590,7 +652,7 @@
                 const development = feature.properties.cyclone_data?.development;
 
                 const marker = L.circleMarker([lat, lon], {
-                    radius: 8,
+                    radius: 6,
                     fillColor: getColor(development),
                     color: '#0066CC',
                     weight: 2,
@@ -608,7 +670,7 @@
                 const development = feature.properties.cyclone_data?.development;
 
                 const marker = L.circleMarker([lat, lon], {
-                    radius: 6,
+                    radius: 4,
                     fillColor: getColor(development),
                     color: '#CC0000',
                     weight: 2,
@@ -620,18 +682,49 @@
                 marker.addTo(forecastLayer);
             }
 
-            // Update display info
-            dateDisplay.textContent = `${data.cyclone_name} - ${trajectory.metadata.date}`;
-            frameCounter.textContent = index + 1;
-            trajectorySlider.value = index;
-            trajectoryPosition.textContent = index + 1;
+            return { analysisPoints, forecastPoints };
+        }
 
-            // Add cyclone info control if not exists
-            updateCycloneInfo(data, analysisPoints);
+        // Display snapshot
+        async function displaySnapshot(index) {
+            if (snapshotMetadata.length === 0) return;
+
+            const metadata = snapshotMetadata[index];
+
+            // Fetch the actual snapshot data
+            const snapshot = await fetchSnapshotData(metadata);
+
+            // Get first trajectory (or handle multiple)
+            if (snapshot.trajectories.length === 0) {
+                dateDisplay.textContent = `${snapshot.date} - No active cyclones`;
+                reportSection.style.display = 'none';
+                return;
+            }
+
+            const firstTrajectory = snapshot.trajectories[0].cyclone_trajectory;
+            const { analysisPoints } = displayTrajectoryOnMap(firstTrajectory);
+
+            // Update display info
+            const cycloneNames = snapshot.trajectories.map(t => t.cyclone_trajectory.cyclone_name).join(', ');
+            dateDisplay.textContent = `${cycloneNames} - ${snapshot.date}`;
+            frameCounter.textContent = index + 1;
+            snapshotSlider.value = index;
+            snapshotPosition.textContent = index + 1;
+
+            // Update cyclone info panel
+            updateCycloneInfo(firstTrajectory, analysisPoints);
+
+            // Display report if present
+            displayReport(snapshot.report);
+
+            // Fit map to trajectory on first display
+            if (index === 0) {
+                fitMapToTrajectory(firstTrajectory);
+            }
         }
 
         // Update cyclone info panel
-        function updateCycloneInfo(data, analysisPoints) {
+        function updateCycloneInfo(trajectory, analysisPoints) {
             // Remove existing info control
             const existingInfo = document.querySelector('.leaflet-top.leaflet-left .cyclone-info');
             if (existingInfo) {
@@ -648,24 +741,50 @@
             info.onAdd = function() {
                 const div = L.DomUtil.create('div', 'cyclone-info');
                 div.innerHTML = `
-                    <h3>🌀 ${data.cyclone_name}</h3>
+                    <h3>🌀 ${trajectory.cyclone_name}</h3>
                     <p><strong>Status:</strong> ${cycloneData.development || 'N/A'}</p>
                     <p><strong>Pressure:</strong> ${cycloneData.minimum_pressure} hPa</p>
                     <p><strong>Max wind:</strong> ${formatWind(cycloneData.maximum_wind.wind_speed_kt)}</p>
-                    <p><strong>Update:</strong> ${new Date(data.reference_time).toLocaleString()}</p>
+                    <p><strong>Update:</strong> ${new Date(trajectory.reference_time).toLocaleString()}</p>
                 `;
                 return div;
             };
             info.addTo(map);
         }
 
+        // Display report
+        function displayReport(report) {
+            if (!report) {
+                reportSection.style.display = 'none';
+                return;
+            }
+
+            reportSection.style.display = 'block';
+
+            let html = '';
+
+            for (const item of report.text_bloc_item) {
+                if (item.bloc_title) {
+                    html += `<div class="bloc-title">${item.bloc_title}</div>`;
+                } else if (item.text) {
+                    if (item.text === '-------------------------------------------------') {
+                        html += '<div class="separator"></div>';
+                    } else if (item.text.trim()) {
+                        html += `<div class="text-line">${item.text}</div>`;
+                    }
+                }
+            }
+
+            reportContent.innerHTML = html;
+        }
+
         // Animation loop
-        function animate() {
+        async function animate() {
             if (!isPlaying) return;
 
             currentIndex++;
 
-            if (currentIndex >= trajectories.length) {
+            if (currentIndex >= snapshotMetadata.length) {
                 if (isLooping) {
                     currentIndex = 0;
                 } else {
@@ -674,12 +793,12 @@
                 }
             }
 
-            displayTrajectory(currentIndex);
+            await displaySnapshot(currentIndex);
         }
 
         // Start animation
         function startAnimation() {
-            if (trajectories.length === 0) return;
+            if (snapshotMetadata.length === 0) return;
 
             isPlaying = true;
             playPauseBtn.innerHTML = '⏸ Pause';
@@ -706,9 +825,9 @@
         }
 
         // Restart animation from beginning
-        function restartAnimation() {
+        async function restartAnimation() {
             currentIndex = 0;
-            displayTrajectory(currentIndex);
+            await displaySnapshot(currentIndex);
 
             if (!isPlaying) {
                 startAnimation();
@@ -734,15 +853,16 @@
             }
         });
 
-        // Trajectory slider control
-        trajectorySlider.addEventListener('input', (e) => {
+        // Snapshot slider control
+        snapshotSlider.addEventListener('input', async (e) => {
             currentIndex = parseInt(e.target.value);
-            displayTrajectory(currentIndex);
 
             // Pause animation when manually scrubbing
             if (isPlaying) {
                 stopAnimation();
             }
+
+            await displaySnapshot(currentIndex);
         });
 
         // Initialize

@@ -7,6 +7,7 @@ import type {
   Season,
   CycloneListResponse,
   CycloneTrajectoryResponse,
+  CycloneReport,
 } from './types.js';
 
 const SESSION_URL = 'https://meteofrance.re/fr/cyclone';
@@ -175,6 +176,23 @@ export class MeteoFranceClient {
   async getCycloneTrajectory(cycloneId: string): Promise<CycloneTrajectoryResponse> {
     return this.apiRequest<CycloneTrajectoryResponse>(
       `/cyclone/trajectory?cyclone_id=${encodeURIComponent(cycloneId)}`
+    );
+  }
+
+  /**
+   * Gets the cyclone activity report for a given domain.
+   *
+   * @param domain - Domain code (e.g., 'SWI' for South-West Indian Ocean)
+   * @param reportType - Report type (default: 'cyclone')
+   * @param reportSubtype - Report subtype (default: "Bulletin d'Activité Cyclonique")
+   */
+  async getReport(
+    domain: Basin,
+    reportType: string = 'cyclone',
+    reportSubtype: string = "Bulletin d'Activité Cyclonique"
+  ): Promise<CycloneReport> {
+    return this.apiRequest<CycloneReport>(
+      `/report?domain=${encodeURIComponent(domain)}&report_type=${encodeURIComponent(reportType)}&report_subtype=${encodeURIComponent(reportSubtype)}`
     );
   }
 }
