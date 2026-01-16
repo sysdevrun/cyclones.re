@@ -168,6 +168,7 @@ async function main(): Promise<void> {
     const snapshot: FetchSnapshot = {
       timestamp,
       date: dateStr,
+      cyclone_list: cycloneList,
       cyclone_list_file: getRelativePath(cycloneListFile),
       trajectory_files: trajectoryFiles,
       report_file: reportFile,

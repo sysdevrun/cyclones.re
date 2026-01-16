@@ -73,9 +73,9 @@ export interface WindContour {
 
 export interface CycloneData {
   development: CycloneDevelopment;
-  minimum_pressure: number;
-  storm_motion: StormMotion;
-  last_closed_isobar: LastClosedIsobar;
+  minimum_pressure?: number;
+  storm_motion?: StormMotion;
+  last_closed_isobar?: LastClosedIsobar;
   maximum_wind: MaximumWind;
   Dvorak?: Dvorak;
   wind_contours?: WindContour[];
@@ -171,6 +171,7 @@ export interface CycloneReport {
 export interface FetchSnapshot {
   timestamp: number;
   date: string;
+  cyclone_list: CycloneListResponse;
   cyclone_list_file: string;
   trajectory_files: string[];
   report_file: string | null;

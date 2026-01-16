@@ -301,6 +301,17 @@
             text-align: center;
             padding: 20px;
         }
+
+        .forecast-label {
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid #CC0000;
+            border-radius: 3px;
+            padding: 2px 4px;
+            font-size: 10px;
+            font-weight: 600;
+            color: #CC0000;
+            white-space: nowrap;
+        }
     </style>
 </head>
 <body>
@@ -546,6 +557,15 @@
             return `${kt} kt (${kmh} km/h)`;
         }
 
+        // Format date for forecast label (DD/MM — HHh)
+        function formatForecastDate(isoDate) {
+            const date = new Date(isoDate);
+            const day = String(date.getUTCDate()).padStart(2, '0');
+            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const hours = String(date.getUTCHours()).padStart(2, '0');
+            return `${day}/${month} — ${hours}h`;
+        }
+
         // Create popup content for a point
         function createPopupContent(properties, isAnalysis) {
             const data = properties.cyclone_data;
@@ -556,7 +576,13 @@
                     <h3>${type}</h3>
                     <p><strong>Time:</strong> ${new Date(properties.time).toLocaleString()}</p>
                     <p><strong>Development:</strong> ${data.development || 'N/A'}</p>
-                    <p><strong>Pressure:</strong> ${data.minimum_pressure} hPa</p>
+            `;
+
+            if (data.minimum_pressure !== undefined) {
+                content += `<p><strong>Pressure:</strong> ${data.minimum_pressure} hPa</p>`;
+            }
+
+            content += `
                     <p><strong>Max wind:</strong> ${formatWind(data.maximum_wind.wind_speed_kt)}</p>
                     <p><strong>Gusts:</strong> ${formatWind(data.maximum_wind.wind_speed_gust_kt)}</p>
             `;
@@ -652,7 +678,7 @@
                 const development = feature.properties.cyclone_data?.development;
 
                 const marker = L.circleMarker([lat, lon], {
-                    radius: 6,
+                    radius: 3,
                     fillColor: getColor(development),
                     color: '#0066CC',
                     weight: 2,
@@ -664,7 +690,7 @@
                 marker.addTo(analysisLayer);
             }
 
-            // Draw forecast points
+            // Draw forecast points with date labels
             for (const feature of forecastPoints) {
                 const [lon, lat] = feature.geometry.coordinates;
                 const development = feature.properties.cyclone_data?.development;
@@ -680,6 +706,16 @@
 
                 marker.bindPopup(createPopupContent(feature.properties, false));
                 marker.addTo(forecastLayer);
+
+                // Add date label next to forecast circle
+                const dateLabel = formatForecastDate(feature.properties.time);
+                const labelIcon = L.divIcon({
+                    className: 'forecast-label',
+                    html: dateLabel,
+                    iconSize: null,
+                    iconAnchor: [-8, 6]
+                });
+                L.marker([lat, lon], { icon: labelIcon, interactive: false }).addTo(forecastLayer);
             }
 
             return { analysisPoints, forecastPoints };
