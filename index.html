@@ -212,6 +212,12 @@
                 <input type="range" id="speedSlider" min="100" max="2000" step="100" value="500">
                 <span class="speed-display"><span id="speedDisplay">500</span> ms</span>
             </div>
+
+            <div class="control-group">
+                <label for="imageSlider">Image position:</label>
+                <input type="range" id="imageSlider" min="0" max="0" step="1" value="0">
+                <span class="speed-display"><span id="imagePosition">0</span> / <span id="imageTotal">0</span></span>
+            </div>
         </div>
 
         <div class="viewer">
@@ -233,6 +239,9 @@
     </div>
 
     <script>
+        // API base URL for remote images and data
+        const API_BASE_URL = 'https://cmrs.sys-dev-run.fr';
+
         let images = [];
         let currentIndex = 0;
         let isPlaying = false;
@@ -250,12 +259,15 @@
         const daysInput = document.getElementById('daysInput');
         const frameCounter = document.getElementById('frameCounter');
         const totalFrames = document.getElementById('totalFrames');
+        const imageSlider = document.getElementById('imageSlider');
+        const imagePosition = document.getElementById('imagePosition');
+        const imageTotal = document.getElementById('imageTotal');
 
         // Load images from JSON
         async function loadImages() {
             try {
                 const days = parseInt(daysInput.value) || 3;
-                const response = await fetch('images.json');
+                const response = await fetch(`${API_BASE_URL}/images.json`);
 
                 if (!response.ok) {
                     throw new Error('Failed to load images.json');
@@ -273,7 +285,13 @@
                 }
 
                 totalFrames.textContent = images.length;
+                imageTotal.textContent = images.length;
                 currentIndex = 0;
+
+                // Update slider range
+                imageSlider.max = images.length - 1;
+                imageSlider.value = 0;
+
                 displayImage(currentIndex);
 
                 // Auto-start animation
@@ -303,9 +321,13 @@
                 imageContainer.appendChild(img);
             }
 
-            img.src = image.path;
+            img.src = `${API_BASE_URL}/${image.path}`;
             dateDisplay.textContent = image.date;
             frameCounter.textContent = index + 1;
+
+            // Update slider position
+            imageSlider.value = index;
+            imagePosition.textContent = index + 1;
         }
 
         // Animation loop
@@ -380,6 +402,17 @@
             if (isPlaying) {
                 clearInterval(animationInterval);
                 animationInterval = setInterval(animate, speed);
+            }
+        });
+
+        // Image slider control
+        imageSlider.addEventListener('input', (e) => {
+            currentIndex = parseInt(e.target.value);
+            displayImage(currentIndex);
+
+            // Pause animation when manually scrubbing
+            if (isPlaying) {
+                stopAnimation();
             }
         });
 
