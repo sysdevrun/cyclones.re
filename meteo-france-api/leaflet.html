@@ -383,6 +383,7 @@
         let isLooping = false;
         let animationInterval = null;
         let speed = 1000;
+        let hasInitiallyCentered = false;  // Track if map has been centered on first load
 
         // Map layers
         let map;
@@ -779,9 +780,10 @@
             // Display report if present
             displayReport(snapshot.report);
 
-            // Fit map to trajectory on first display
-            if (index === 0) {
+            // Fit map to trajectory on first display only
+            if (index === 0 && !hasInitiallyCentered) {
                 fitMapToTrajectory(firstTrajectory);
+                hasInitiallyCentered = true;
             }
         }
 
