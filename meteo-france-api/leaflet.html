@@ -375,6 +375,9 @@
     </div>
 
     <script>
+        // API base URL for remote data
+        const API_BASE_URL = 'https://cmrs.sys-dev-run.fr';
+
         // State
         let snapshotMetadata = [];  // Metadata from api_data.json
         let loadedSnapshots = {};   // Cache for loaded snapshot data
@@ -463,7 +466,7 @@
             try {
                 loadingText.textContent = 'Loading metadata...';
 
-                const response = await fetch('api_data.json');
+                const response = await fetch(`${API_BASE_URL}/api_data.json`);
                 if (!response.ok) {
                     throw new Error('Failed to load api_data.json');
                 }
