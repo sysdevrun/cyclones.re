@@ -565,6 +565,30 @@
             }
         }
 
+        // Fit map bounds to all trajectories
+        function fitMapToAllTrajectories(trajectories) {
+            const bounds = [];
+
+            for (const trajectory of trajectories) {
+                for (const feature of trajectory.features) {
+                    if (feature.geometry.type === 'Point') {
+                        const [lon, lat] = feature.geometry.coordinates;
+                        bounds.push([lat, lon]);
+                    } else if (feature.geometry.type === 'Polygon') {
+                        for (const ring of feature.geometry.coordinates) {
+                            for (const [lon, lat] of ring) {
+                                bounds.push([lat, lon]);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (bounds.length > 0) {
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+        }
+
         // Get color based on development stage
         function getColor(development) {
             return developmentColors[development] || '#808080';
@@ -626,12 +650,14 @@
         }
 
         // Display a single trajectory on the map
-        function displayTrajectoryOnMap(trajectory) {
-            // Clear existing layers
-            analysisLayer.clearLayers();
-            forecastLayer.clearLayers();
-            uncertaintyLayer.clearLayers();
-            pathLayer.clearLayers();
+        function displayTrajectoryOnMap(trajectory, clearLayers = true) {
+            // Clear existing layers only if requested
+            if (clearLayers) {
+                analysisLayer.clearLayers();
+                forecastLayer.clearLayers();
+                uncertaintyLayer.clearLayers();
+                pathLayer.clearLayers();
+            }
 
             // Separate features by type
             const analysisPoints = [];
@@ -767,8 +793,17 @@
                 return;
             }
 
-            const firstTrajectory = snapshot.trajectories[0].cyclone_trajectory;
-            const { analysisPoints } = displayTrajectoryOnMap(firstTrajectory);
+            // Display all trajectories
+            let allAnalysisPoints = [];
+            let allTrajectories = [];
+
+            for (let i = 0; i < snapshot.trajectories.length; i++) {
+                const trajectory = snapshot.trajectories[i].cyclone_trajectory;
+                allTrajectories.push(trajectory);
+                // Clear layers only for the first trajectory
+                const { analysisPoints } = displayTrajectoryOnMap(trajectory, i === 0);
+                allAnalysisPoints.push({ trajectory, analysisPoints });
+            }
 
             // Update display info
             const cycloneNames = snapshot.trajectories.map(t => t.cyclone_trajectory.cyclone_name).join(', ');
@@ -777,46 +812,47 @@
             snapshotSlider.value = index;
             snapshotPosition.textContent = index + 1;
 
-            // Update cyclone info panel
-            updateCycloneInfo(firstTrajectory, analysisPoints);
+            // Update cyclone info panel for all cyclones
+            updateCycloneInfo(allAnalysisPoints);
 
             // Display report if present
             displayReport(snapshot.report);
 
-            // Fit map to trajectory on first display only
+            // Fit map to all trajectories on first display only
             if (index === 0 && !hasInitiallyCentered) {
-                fitMapToTrajectory(firstTrajectory);
+                fitMapToAllTrajectories(allTrajectories);
                 hasInitiallyCentered = true;
             }
         }
 
-        // Update cyclone info panel
-        function updateCycloneInfo(trajectory, analysisPoints) {
-            // Remove existing info control
-            const existingInfo = document.querySelector('.leaflet-top.leaflet-left .cyclone-info');
-            if (existingInfo) {
-                existingInfo.parentElement.remove();
+        // Update cyclone info panel for multiple cyclones
+        function updateCycloneInfo(allAnalysisPoints) {
+            // Remove existing info controls
+            const existingInfos = document.querySelectorAll('.leaflet-top.leaflet-left .cyclone-info');
+            existingInfos.forEach(el => el.parentElement.remove());
+
+            // Create info panel for each cyclone
+            for (const { trajectory, analysisPoints } of allAnalysisPoints) {
+                // Get latest analysis data
+                const latestAnalysis = analysisPoints[analysisPoints.length - 1];
+                if (!latestAnalysis) continue;
+
+                const cycloneData = latestAnalysis.properties.cyclone_data;
+
+                const info = L.control({ position: 'topleft' });
+                info.onAdd = function() {
+                    const div = L.DomUtil.create('div', 'cyclone-info');
+                    div.innerHTML = `
+                        <h3>🌀 ${trajectory.cyclone_name}</h3>
+                        <p><strong>Status:</strong> ${cycloneData.development || 'N/A'}</p>
+                        <p><strong>Pressure:</strong> ${cycloneData.minimum_pressure} hPa</p>
+                        <p><strong>Max wind:</strong> ${formatWind(cycloneData.maximum_wind.wind_speed_kt)}</p>
+                        <p><strong>Update:</strong> ${new Date(trajectory.reference_time).toLocaleString()}</p>
+                    `;
+                    return div;
+                };
+                info.addTo(map);
             }
-
-            // Get latest analysis data
-            const latestAnalysis = analysisPoints[analysisPoints.length - 1];
-            if (!latestAnalysis) return;
-
-            const cycloneData = latestAnalysis.properties.cyclone_data;
-
-            const info = L.control({ position: 'topleft' });
-            info.onAdd = function() {
-                const div = L.DomUtil.create('div', 'cyclone-info');
-                div.innerHTML = `
-                    <h3>🌀 ${trajectory.cyclone_name}</h3>
-                    <p><strong>Status:</strong> ${cycloneData.development || 'N/A'}</p>
-                    <p><strong>Pressure:</strong> ${cycloneData.minimum_pressure} hPa</p>
-                    <p><strong>Max wind:</strong> ${formatWind(cycloneData.maximum_wind.wind_speed_kt)}</p>
-                    <p><strong>Update:</strong> ${new Date(trajectory.reference_time).toLocaleString()}</p>
-                `;
-                return div;
-            };
-            info.addTo(map);
         }
 
         // Display report
