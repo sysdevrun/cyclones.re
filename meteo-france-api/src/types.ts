@@ -168,6 +168,14 @@ export interface CycloneReport {
 
 // ============ Fetch Snapshot Types ============
 
+export interface SatelliteImage {
+  file: string;
+  layer: string;
+  bbox: [number, number, number, number];
+  width: number;
+  height: number;
+}
+
 export interface FetchSnapshot {
   timestamp: number;
   date: string;
@@ -175,6 +183,7 @@ export interface FetchSnapshot {
   cyclone_list_file: string;
   trajectory_files: string[];
   report_file: string | null;
+  satellite_image: SatelliteImage | null;
 }
 
 export type ApiData = FetchSnapshot[];

@@ -10,7 +10,9 @@ import {
   CycloneReport,
   FetchSnapshot,
   ApiData,
+  SatelliteImage,
 } from './src/index.js';
+import WMSDownloader from '../wms-downloader/index';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -18,6 +20,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const JSON_FILE = path.join(__dirname, 'api_data.json');
 const DATA_DIR = path.join(__dirname, 'data');
 const BASIN = 'SWI';
+
+// WMS Configuration for Indian Ocean satellite imagery
+const WMS_URL = 'https://view.eumetsat.int/geoserver/msg_iodc/ir108/ows';
+const WMS_LAYER = 'ir108';
+// Indian Ocean bounding box focused on cyclone region
+const WMS_BBOX: [number, number, number, number] = [30, -40, 100, 10];
+const WMS_WIDTH = 1400;
+const WMS_HEIGHT = 1000;
 
 // Get current cyclone season (July to June cycle)
 function getCurrentSeason(): string {
@@ -84,6 +94,36 @@ function saveApiData(data: ApiData): void {
 // Get relative path from __dirname
 function getRelativePath(absolutePath: string): string {
   return path.relative(__dirname, absolutePath);
+}
+
+// Download satellite image from WMS
+async function downloadSatelliteImage(outputDir: string): Promise<SatelliteImage | null> {
+  try {
+    const downloader = new WMSDownloader(WMS_URL);
+
+    // Generate filename with layer type for future extensibility
+    const filename = `satellite_${WMS_LAYER}.png`;
+    const outputPath = path.join(outputDir, filename);
+
+    await downloader.downloadToFile({
+      layers: WMS_LAYER,
+      bbox: WMS_BBOX,
+      width: WMS_WIDTH,
+      height: WMS_HEIGHT,
+      format: 'image/png',
+    }, outputPath);
+
+    return {
+      file: getRelativePath(outputPath),
+      layer: WMS_LAYER,
+      bbox: WMS_BBOX,
+      width: WMS_WIDTH,
+      height: WMS_HEIGHT,
+    };
+  } catch (error) {
+    console.warn(`   Warning: Could not download satellite image: ${error instanceof Error ? error.message : String(error)}`);
+    return null;
+  }
 }
 
 // Main function
@@ -164,6 +204,17 @@ async function main(): Promise<void> {
       console.warn(`   Warning: Could not fetch report: ${error instanceof Error ? error.message : String(error)}`);
     }
 
+    // Download satellite image
+    const satelliteStepNum = trajectoryIndex + 1;
+    console.log(`\n${satelliteStepNum}. Downloading Indian Ocean satellite image (${WMS_LAYER})...`);
+    const satelliteImage = await downloadSatelliteImage(dateDir);
+    if (satelliteImage) {
+      console.log(`   Layer: ${satelliteImage.layer}`);
+      console.log(`   Bounding box: [${satelliteImage.bbox.join(', ')}]`);
+      console.log(`   Size: ${satelliteImage.width}x${satelliteImage.height}`);
+      console.log(`   Saved to ${satelliteImage.file}`);
+    }
+
     // Create snapshot metadata
     const snapshot: FetchSnapshot = {
       timestamp,
@@ -172,6 +223,7 @@ async function main(): Promise<void> {
       cyclone_list_file: getRelativePath(cycloneListFile),
       trajectory_files: trajectoryFiles,
       report_file: reportFile,
+      satellite_image: satelliteImage,
     };
 
     // Load existing data and append new snapshot
