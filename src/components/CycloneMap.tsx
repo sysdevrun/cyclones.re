@@ -6,7 +6,6 @@ import { getColor } from '../utils/colors';
 import { formatPopupDate, formatWind, formatForecastDate } from '../utils/formatting';
 import { getSatelliteImageUrl, bboxToLeafletBounds } from '../utils/api';
 import { Legend } from './Legend';
-import { CycloneInfo } from './CycloneInfo';
 
 interface CycloneMapProps {
   trajectories: CycloneTrajectory[];
@@ -78,6 +77,31 @@ function ForecastLabel({ lat, lon, time }: { lat: number; lon: number; time: str
       }
     };
   }, [map, lat, lon, time]);
+
+  return null;
+}
+
+// Cyclone name label component
+function CycloneNameLabel({ lat, lon, name }: { lat: number; lon: number; name: string }) {
+  const map = useMap();
+  const markerRef = useRef<L.Marker | null>(null);
+
+  useEffect(() => {
+    const labelIcon = L.divIcon({
+      className: 'cyclone-name-label',
+      html: `<span style="font-size: 12px; font-weight: bold; color: #0066CC; white-space: nowrap; text-shadow: 1px 1px 2px white, -1px -1px 2px white, 1px -1px 2px white, -1px 1px 2px white;">${name}</span>`,
+      iconSize: [0, 0],
+      iconAnchor: [-10, 4],
+    });
+
+    markerRef.current = L.marker([lat, lon], { icon: labelIcon, interactive: false }).addTo(map);
+
+    return () => {
+      if (markerRef.current) {
+        map.removeLayer(markerRef.current);
+      }
+    };
+  }, [map, lat, lon, name]);
 
   return null;
 }
@@ -158,23 +182,6 @@ export function CycloneMap({
     return result;
   }, [trajectories]);
 
-  // Get cyclone info for display
-  const cycloneInfos = useMemo(() => {
-    return processedData.map(({ trajectory, analysisPoints }) => {
-      const latestAnalysis = analysisPoints[analysisPoints.length - 1];
-      if (!latestAnalysis?.properties.cyclone_data) return null;
-
-      const data = latestAnalysis.properties.cyclone_data;
-      return {
-        name: trajectory.cyclone_name,
-        development: data.development,
-        pressure: data.minimum_pressure,
-        maxWind: data.maximum_wind.wind_speed_kt,
-        referenceTime: trajectory.reference_time,
-      };
-    }).filter(Boolean);
-  }, [processedData]);
-
   const handleFitDone = useCallback(() => {
     onInitialFitDone();
   }, [onInitialFitDone]);
@@ -217,7 +224,7 @@ export function CycloneMap({
         )}
 
         {/* Render each trajectory */}
-        {processedData.map(({ analysisPoints, forecastPoints, uncertaintyCone }, trajIndex) => (
+        {processedData.map(({ trajectory, analysisPoints, forecastPoints, uncertaintyCone }, trajIndex) => (
           <div key={`traj-${trajIndex}`}>
             {/* Uncertainty cone (background) */}
             {uncertaintyCone && uncertaintyCone.geometry.type === 'Polygon' && (
@@ -293,24 +300,30 @@ export function CycloneMap({
               if (feature.geometry.type !== 'Point') return null;
               const [lon, lat] = feature.geometry.coordinates;
               const development = feature.properties.cyclone_data?.development;
+              const isFirst = i === 0;
 
               return (
-                <CircleMarker
-                  key={`analysis-${trajIndex}-${i}`}
-                  center={[lat, lon]}
-                  radius={3}
-                  pathOptions={{
-                    fillColor: getColor(development),
-                    color: '#0066CC',
-                    weight: 2,
-                    opacity: 1,
-                    fillOpacity: 0.8,
-                  }}
-                >
-                  <Popup>
-                    <TrajectoryPopup feature={feature} isAnalysis={true} />
-                  </Popup>
-                </CircleMarker>
+                <div key={`analysis-${trajIndex}-${i}`}>
+                  <CircleMarker
+                    center={[lat, lon]}
+                    radius={3}
+                    pathOptions={{
+                      fillColor: getColor(development),
+                      color: '#0066CC',
+                      weight: 2,
+                      opacity: 1,
+                      fillOpacity: 0.8,
+                    }}
+                  >
+                    <Popup>
+                      <TrajectoryPopup feature={feature} isAnalysis={true} />
+                    </Popup>
+                  </CircleMarker>
+                  {/* Cyclone name label at first analysis point */}
+                  {isFirst && (
+                    <CycloneNameLabel lat={lat} lon={lon} name={trajectory.cyclone_name} />
+                  )}
+                </div>
               );
             })}
 
@@ -348,20 +361,6 @@ export function CycloneMap({
       {/* Legend overlay */}
       <div className="absolute bottom-4 right-4 z-[1000]">
         <Legend />
-      </div>
-
-      {/* Cyclone info overlays */}
-      <div className="absolute top-4 left-4 z-[1000] space-y-2">
-        {cycloneInfos.map((info, i) => info && (
-          <CycloneInfo
-            key={i}
-            name={info.name}
-            development={info.development}
-            pressure={info.pressure}
-            maxWind={info.maxWind}
-            referenceTime={info.referenceTime}
-          />
-        ))}
       </div>
     </div>
   );

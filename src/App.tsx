@@ -39,10 +39,6 @@ function App() {
     .map((t) => t.cyclone_trajectory.cyclone_name)
     .join(', ') || '';
 
-  const dateDisplay = currentSnapshot
-    ? `${cycloneNames} - ${currentSnapshot.date}`
-    : 'Loading...';
-
   return (
     <div className="min-h-screen bg-gradient-primary flex justify-center items-center p-5">
       <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-5xl w-full">
@@ -86,9 +82,16 @@ function App() {
           disabled={isLoading || !!error}
         />
 
-        {/* Date Display */}
-        <div className="text-center text-lg text-gray-600 font-medium my-4">
-          {dateDisplay}
+        {/* Cyclone names and date above map */}
+        <div className="text-center my-4">
+          {cycloneNames && (
+            <div className="text-xl font-semibold text-gray-800">
+              {cycloneNames}
+            </div>
+          )}
+          <div className="text-lg text-gray-600">
+            {currentSnapshot?.date || 'Loading...'}
+          </div>
         </div>
 
         {/* Map Container */}
@@ -113,6 +116,11 @@ function App() {
           {isLoading && (
             <LoadingOverlay message={loadingMessage} error={error} />
           )}
+        </div>
+
+        {/* Frame Counter below the map */}
+        <div className="text-center text-gray-600 text-sm mt-3">
+          Frame: <strong>{animation.currentIndex + 1} / {metadata.length}</strong>
         </div>
 
         {/* Report Section */}

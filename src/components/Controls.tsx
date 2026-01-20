@@ -145,11 +145,6 @@ export function Controls({
           ∞ Loop: {isLooping ? 'ON' : 'OFF'}
         </button>
       </div>
-
-      {/* Frame Counter */}
-      <div className="text-center text-gray-600 text-sm">
-        Frame: <strong>{currentIndex + 1} / {totalFrames}</strong>
-      </div>
     </div>
   );
 }
