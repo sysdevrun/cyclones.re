@@ -1,0 +1,25 @@
+{
+  "name": "wms-downloader",
+  "version": "1.0.0",
+  "description": "TypeScript library for downloading data from WMS (Web Map Service) endpoints",
+  "main": "index.ts",
+  "types": "index.ts",
+  "scripts": {
+    "example": "tsx example.ts"
+  },
+  "keywords": [
+    "wms",
+    "web-map-service",
+    "ogc",
+    "geoserver",
+    "eumetsat",
+    "map",
+    "download",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@camptocamp/ogc-client": "^1.2.0"
+  }
+}

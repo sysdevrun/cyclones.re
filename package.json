@@ -5,7 +5,8 @@
   "main": "fetch_image.ts",
   "scripts": {
     "fetch": "tsx fetch_image.ts",
-    "dev": "tsx watch fetch_image.ts"
+    "dev": "tsx watch fetch_image.ts",
+    "wms-example": "tsx wms-downloader/example.ts"
   },
   "keywords": [
     "weather",
@@ -20,5 +21,8 @@
     "@types/node": "^20.10.0",
     "tsx": "^4.7.0",
     "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "@camptocamp/ogc-client": "^1.3.0"
   }
 }

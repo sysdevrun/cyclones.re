@@ -15,6 +15,7 @@ A TypeScript-based weather image archiver that fetches cyclone trajectory images
   - Infinite loop mode
   - Play/Pause controls
   - Restart from beginning
+- **NEW**: WMS Downloader Library - TypeScript library for downloading data from WMS services like EUMETSAT
 
 ## Requirements
 
@@ -83,6 +84,48 @@ python3 -m http.server 8000
 
 Then open your browser to: `http://localhost:8000`
 
+## WMS Downloader Library
+
+This project now includes a TypeScript library for downloading data from WMS (Web Map Service) endpoints like EUMETSAT geoserver.
+
+### Quick Start
+
+```typescript
+import { WMSDownloader } from './wms-downloader';
+
+const downloader = new WMSDownloader(
+  'https://view.eumetsat.int/geoserver/msg_iodc/ir108/ows'
+);
+
+// Get service capabilities
+const capabilities = await downloader.getCapabilities();
+
+// Download a map image
+await downloader.downloadToFile(
+  {
+    layers: 'ir108',
+    bbox: [-180, -90, 180, 90],
+    width: 2048,
+    height: 1024,
+    format: 'image/png'
+  },
+  'output.png'
+);
+```
+
+### Run the Example
+
+```bash
+tsx wms-downloader/example.ts
+```
+
+This will demonstrate:
+- Fetching WMS capabilities
+- Downloading global and regional views
+- Saving images to the `wms-downloads/` directory
+
+See [wms-downloader/README.md](wms-downloader/README.md) for complete documentation.
+
 ## Directory Structure
 
 ```
@@ -94,6 +137,11 @@ meteo-cyclone-animation/
 ├── tsconfig.json           # TypeScript configuration
 ├── images.json             # Generated index (created by script)
 ├── fetch.log               # Cron execution log
+├── wms-downloader/         # WMS download library
+│   ├── index.ts            # Main library file
+│   ├── example.ts          # Example usage
+│   ├── package.json        # Library package info
+│   └── README.md           # Library documentation
 ├── node_modules/           # Dependencies (after npm install)
 └── images/                 # Image storage (created by script)
     ├── 2026-01-14/
