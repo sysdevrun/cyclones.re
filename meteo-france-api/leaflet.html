@@ -326,6 +326,44 @@
         .data-source a:hover {
             text-decoration: underline;
         }
+
+        .satellite-controls {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            min-width: auto;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .satellite-status {
+            font-size: 0.85em;
+            color: #888;
+            margin-left: 5px;
+        }
+
+        .satellite-status.available {
+            color: #28a745;
+        }
+
+        .satellite-status.unavailable {
+            color: #dc3545;
+        }
     </style>
 </head>
 <body>
@@ -344,6 +382,22 @@
                 <label for="snapshotSlider">Snapshot:</label>
                 <input type="range" id="snapshotSlider" min="0" max="0" step="1" value="0" disabled>
                 <span class="speed-display"><span id="snapshotPosition">0</span> / <span id="snapshotTotal">0</span></span>
+            </div>
+
+            <div class="control-group">
+                <label>Satellite layers:</label>
+                <div class="satellite-controls">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="ir108Checkbox">
+                        <label for="ir108Checkbox">IR108 (Infrared)</label>
+                        <span id="ir108Status" class="satellite-status"></span>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="rgbCheckbox">
+                        <label for="rgbCheckbox">RGB Natural Enhanced</label>
+                        <span id="rgbStatus" class="satellite-status"></span>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -394,6 +448,14 @@
         let forecastLayer;
         let uncertaintyLayer;
         let pathLayer;
+        let ir108ImageLayer = null;
+        let rgbImageLayer = null;
+
+        // Current satellite image data for the displayed snapshot
+        let currentSatelliteData = {
+            ir108: null,
+            rgb: null
+        };
 
         // DOM elements
         const dateDisplay = document.getElementById('dateDisplay');
@@ -411,6 +473,10 @@
         const loadingText = document.getElementById('loadingText');
         const reportSection = document.getElementById('reportSection');
         const reportContent = document.getElementById('reportContent');
+        const ir108Checkbox = document.getElementById('ir108Checkbox');
+        const rgbCheckbox = document.getElementById('rgbCheckbox');
+        const ir108Status = document.getElementById('ir108Status');
+        const rgbStatus = document.getElementById('rgbStatus');
 
         // Development stages color mapping
         const developmentColors = {
@@ -459,6 +525,78 @@
                 return div;
             };
             legend.addTo(map);
+        }
+
+        // Convert bbox [minLon, minLat, maxLon, maxLat] to Leaflet bounds [[minLat, minLon], [maxLat, maxLon]]
+        function bboxToLeafletBounds(bbox) {
+            const [minLon, minLat, maxLon, maxLat] = bbox;
+            return [[minLat, minLon], [maxLat, maxLon]];
+        }
+
+        // Update satellite image overlay
+        function updateSatelliteOverlay(type, imageData, checkbox) {
+            // Remove existing layer
+            if (type === 'ir108' && ir108ImageLayer) {
+                map.removeLayer(ir108ImageLayer);
+                ir108ImageLayer = null;
+            } else if (type === 'rgb' && rgbImageLayer) {
+                map.removeLayer(rgbImageLayer);
+                rgbImageLayer = null;
+            }
+
+            // If checkbox is not checked or no image data, don't show anything
+            if (!checkbox.checked || !imageData) {
+                return;
+            }
+
+            // Create image overlay with correct bounds
+            const bounds = bboxToLeafletBounds(imageData.bbox);
+            const imageUrl = `${API_BASE_URL}/meteo-france-api/${imageData.file}`;
+
+            const imageOverlay = L.imageOverlay(imageUrl, bounds, {
+                opacity: 0.7,
+                interactive: false
+            });
+
+            // Add to map (below trajectory layers)
+            if (type === 'ir108') {
+                ir108ImageLayer = imageOverlay;
+                // Add below other layers by adding first
+                ir108ImageLayer.addTo(map);
+                ir108ImageLayer.bringToBack();
+            } else {
+                rgbImageLayer = imageOverlay;
+                rgbImageLayer.addTo(map);
+                rgbImageLayer.bringToBack();
+            }
+        }
+
+        // Update satellite status indicators
+        function updateSatelliteStatus(ir108Data, rgbData) {
+            currentSatelliteData.ir108 = ir108Data;
+            currentSatelliteData.rgb = rgbData;
+
+            // Update IR108 status
+            if (ir108Data) {
+                ir108Status.textContent = '(available)';
+                ir108Status.className = 'satellite-status available';
+            } else {
+                ir108Status.textContent = '(unavailable)';
+                ir108Status.className = 'satellite-status unavailable';
+            }
+
+            // Update RGB status
+            if (rgbData) {
+                rgbStatus.textContent = '(available)';
+                rgbStatus.className = 'satellite-status available';
+            } else {
+                rgbStatus.textContent = '(unavailable)';
+                rgbStatus.className = 'satellite-status unavailable';
+            }
+
+            // Update overlays based on checkbox state
+            updateSatelliteOverlay('ir108', ir108Data, ir108Checkbox);
+            updateSatelliteOverlay('rgb', rgbData, rgbCheckbox);
         }
 
         // Load metadata from api_data.json
@@ -818,6 +956,9 @@
             // Display report if present
             displayReport(snapshot.report);
 
+            // Update satellite image overlays
+            updateSatelliteStatus(metadata.satellite_ir108, metadata.satellite_rgb_naturalenhncd);
+
             // Fit map to all trajectories on first display only
             if (index === 0 && !hasInitiallyCentered) {
                 fitMapToAllTrajectories(allTrajectories);
@@ -966,6 +1107,15 @@
             }
 
             await displaySnapshot(currentIndex);
+        });
+
+        // Satellite checkbox controls
+        ir108Checkbox.addEventListener('change', () => {
+            updateSatelliteOverlay('ir108', currentSatelliteData.ir108, ir108Checkbox);
+        });
+
+        rgbCheckbox.addEventListener('change', () => {
+            updateSatelliteOverlay('rgb', currentSatelliteData.rgb, rgbCheckbox);
         });
 
         // Initialize
