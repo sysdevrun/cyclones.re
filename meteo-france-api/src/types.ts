@@ -189,6 +189,47 @@ export interface FetchSnapshot {
 
 export type ApiData = FetchSnapshot[];
 
+// ============ Satellite Metadata Types (for fetch_satellite.ts) ============
+
+export interface SatelliteImageEntry {
+  /** Unique identifier for this image */
+  id: string;
+  /** Relative path to the image file */
+  file: string;
+  /** WMS layer ID */
+  layer: string;
+  /** WMS layer display name */
+  layer_name: string;
+  /** Unix timestamp when image was fetched */
+  timestamp: number;
+  /** Human-readable date string */
+  date: string;
+  /** Bounding box [minLon, minLat, maxLon, maxLat] */
+  bbox: [number, number, number, number];
+  /** Image width in pixels */
+  width: number;
+  /** Image height in pixels */
+  height: number;
+}
+
+export interface SatelliteMetadata {
+  /** Last update timestamp */
+  last_updated: number;
+  /** Last update date string */
+  last_updated_date: string;
+  /** Total number of images */
+  total_images: number;
+  /** Image configuration */
+  config: {
+    bbox: [number, number, number, number];
+    width: number;
+    height: number;
+    layers: string[];
+  };
+  /** All satellite images indexed by timestamp */
+  images: SatelliteImageEntry[];
+}
+
 // ============ Type Guards ============
 
 export function isAnalysisFeature(feature: TrajectoryFeature): feature is AnalysisFeature {
