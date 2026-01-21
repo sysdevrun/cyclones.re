@@ -60,6 +60,15 @@ function App() {
           >
             Météo-France
           </a>
+          {' '}&{' '}
+          <a
+            href="https://www.eumetsat.int/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary-500 hover:underline font-medium"
+          >
+            EUMETSAT
+          </a>
           {' '}- conçu par{' '}
           <a
             href="https://www.sys-dev-run.fr/"
