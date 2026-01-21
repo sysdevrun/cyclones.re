@@ -22,11 +22,13 @@ const DATA_DIR = path.join(__dirname, 'data');
 const BASIN = 'SWI';
 
 // WMS Configuration for Indian Ocean satellite imagery
-// Common settings - focused on SW Indian Ocean cyclone region
-// Bbox: [minLon, minLat, maxLon, maxLat] = East Africa (40°E) to India (80°E), below Madagascar (-30°) to above Mayotte (-5°)
-const WMS_BBOX: [number, number, number, number] = [40, -30, 80, -5];
-const WMS_WIDTH = 1400;
-const WMS_HEIGHT = 875; // Adjusted for 40°x25° aspect ratio
+// Bbox: [minLon, minLat, maxLon, maxLat] - SW Indian Ocean cyclone region
+const WMS_BBOX: [number, number, number, number] = [21.1, -41, 103, 21.1];
+
+// Compute dimensions dynamically from bbox to maintain correct aspect ratio
+const WMS_HEIGHT = 1000;
+const WMS_WIDTH = Math.round(WMS_HEIGHT * (WMS_BBOX[2] - WMS_BBOX[0]) / (WMS_BBOX[3] - WMS_BBOX[1]));
+// With bbox [21.1, -41, 103, 21.1]: lonRange=81.9, latRange=62.1, aspect=1.319, width≈1319
 
 // IR108 infrared channel
 const WMS_IR108_URL = 'https://view.eumetsat.int/geoserver/msg_iodc/ir108/ows';
@@ -122,6 +124,7 @@ async function downloadSatelliteImage(
       width: WMS_WIDTH,
       height: WMS_HEIGHT,
       format: 'image/png',
+      transparent: 'true',
     }, outputPath);
 
     return {
