@@ -63,7 +63,7 @@ export interface WMSCapabilities {
 }
 
 export class WMSDownloader {
-  private endpoint: WmsEndpoint;
+  private endpoint: WmsEndpoint | null = null;
   private baseUrl: string;
 
   /**
@@ -72,7 +72,18 @@ export class WMSDownloader {
    */
   constructor(url: string) {
     this.baseUrl = url;
-    this.endpoint = new WmsEndpoint(url);
+    // Lazy-load WmsEndpoint only when needed (getCapabilities)
+    // to avoid Node.js compatibility issues with @camptocamp/ogc-client
+  }
+
+  /**
+   * Gets or creates the WmsEndpoint instance (lazy initialization)
+   */
+  private getEndpoint(): WmsEndpoint {
+    if (!this.endpoint) {
+      this.endpoint = new WmsEndpoint(this.baseUrl);
+    }
+    return this.endpoint;
   }
 
   /**
@@ -81,11 +92,12 @@ export class WMSDownloader {
    */
   async getCapabilities(): Promise<WMSCapabilities> {
     try {
-      await this.endpoint.isReady();
+      const endpoint = this.getEndpoint();
+      await endpoint.isReady();
 
-      const serviceInfo = this.endpoint.getServiceInfo();
-      const layers = this.endpoint.getFlattenedLayers();
-      const version = this.endpoint.getVersion();
+      const serviceInfo = endpoint.getServiceInfo();
+      const layers = endpoint.getFlattenedLayers();
+      const version = endpoint.getVersion();
 
       return {
         service: {
