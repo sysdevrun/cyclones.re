@@ -6,6 +6,9 @@
  * Dedicated script for fetching satellite images from EUMETSAT WMS.
  * Designed to be run via cron for periodic image collection.
  *
+ * Configuration is read from satellite_metadata.json. If the file doesn't exist,
+ * it will be created with default configuration.
+ *
  * Usage: tsx fetch_satellite.ts
  *
  * Cron example (every 15 minutes):
@@ -16,41 +19,44 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { WMSDownloader } from '../wms-downloader/index';
-import type { SatelliteImageEntry, SatelliteMetadata } from './src/index.js';
+import type { SatelliteImageEntry, SatelliteMetadata, SatelliteFetchConfig } from './src/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// ============ Configuration ============
-
-// Output directories
-const SATELLITE_DIR = path.join(__dirname, 'satellite_images');
+// Metadata file path
 const METADATA_FILE = path.join(__dirname, 'satellite_metadata.json');
 
-// WMS Configuration for Indian Ocean satellite imagery
-// Bbox: [minLon, minLat, maxLon, maxLat] - SW Indian Ocean cyclone region
-const WMS_BBOX: [number, number, number, number] = [21.1, -41, 103, 21.1];
+// ============ Default Configuration ============
 
-// Compute dimensions dynamically from bbox to maintain correct aspect ratio
-const WMS_HEIGHT = 1000;
-const WMS_WIDTH = Math.round(WMS_HEIGHT * (WMS_BBOX[2] - WMS_BBOX[0]) / (WMS_BBOX[3] - WMS_BBOX[1]));
-
-// WMS Endpoints
-const WMS_LAYERS = [
-  {
-    id: 'ir108',
-    name: 'IR108 Infrared',
-    url: 'https://view.eumetsat.int/geoserver/msg_iodc/ir108/ows',
-    layer: 'ir108',
-  },
-  {
-    id: 'rgb_naturalenhncd',
-    name: 'RGB Natural Enhanced',
-    url: 'https://view.eumetsat.int/geoserver/msg_iodc/rgb_naturalenhncd/ows',
-    layer: 'rgb_naturalenhncd',
-  },
-];
+const DEFAULT_CONFIG: SatelliteFetchConfig = {
+  bbox: [21.1, -41, 103, 21.1],
+  height: 1000,
+  output_dir: 'satellite_images',
+  layers: [
+    {
+      id: 'ir108',
+      name: 'IR108 Infrared',
+      url: 'https://view.eumetsat.int/geoserver/msg_iodc/ir108/ows',
+      layer: 'ir108',
+    },
+    {
+      id: 'rgb_naturalenhncd',
+      name: 'RGB Natural Enhanced',
+      url: 'https://view.eumetsat.int/geoserver/msg_iodc/rgb_naturalenhncd/ows',
+      layer: 'rgb_naturalenhncd',
+    },
+  ],
+};
 
 // ============ Utility Functions ============
+
+/**
+ * Compute image width from bbox and height to maintain aspect ratio
+ */
+function computeWidth(bbox: [number, number, number, number], height: number): number {
+  const [minLon, minLat, maxLon, maxLat] = bbox;
+  return Math.round(height * (maxLon - minLon) / (maxLat - minLat));
+}
 
 /**
  * Format date for display
@@ -91,7 +97,7 @@ function getRelativePath(absolutePath: string): string {
 }
 
 /**
- * Load existing metadata or create empty structure
+ * Load existing metadata or create with default config
  */
 function loadMetadata(): SatelliteMetadata {
   if (fs.existsSync(METADATA_FILE)) {
@@ -103,16 +109,12 @@ function loadMetadata(): SatelliteMetadata {
     }
   }
 
+  // Create new metadata with default config
   return {
     last_updated: 0,
     last_updated_date: '',
     total_images: 0,
-    config: {
-      bbox: WMS_BBOX,
-      width: WMS_WIDTH,
-      height: WMS_HEIGHT,
-      layers: WMS_LAYERS.map(l => l.id),
-    },
+    config: DEFAULT_CONFIG,
     images: [],
   };
 }
@@ -130,6 +132,9 @@ function saveMetadata(metadata: SatelliteMetadata): void {
 async function downloadSatelliteImage(
   wmsUrl: string,
   layer: string,
+  bbox: [number, number, number, number],
+  width: number,
+  height: number,
   outputPath: string
 ): Promise<boolean> {
   try {
@@ -137,9 +142,9 @@ async function downloadSatelliteImage(
 
     await downloader.downloadToFile({
       layers: layer,
-      bbox: WMS_BBOX,
-      width: WMS_WIDTH,
-      height: WMS_HEIGHT,
+      bbox,
+      width,
+      height,
       format: 'image/png',
       transparent: 'true',
     }, outputPath);
@@ -160,26 +165,35 @@ async function main(): Promise<void> {
     const dateStr = formatDate(now);
     const { dateStr: datePart, timeStr: timePart } = getDateComponents(now);
 
+    // Load metadata (contains config)
+    const metadata = loadMetadata();
+    const config = metadata.config;
+
+    // Compute width from bbox and height
+    const width = computeWidth(config.bbox, config.height);
+
+    // Resolve output directory
+    const outputBaseDir = path.join(__dirname, config.output_dir);
+
     console.log('='.repeat(60));
     console.log('Satellite Image Fetcher');
     console.log('='.repeat(60));
     console.log(`Timestamp: ${dateStr}`);
-    console.log(`Output directory: ${SATELLITE_DIR}`);
-    console.log(`Image dimensions: ${WMS_WIDTH}x${WMS_HEIGHT}`);
-    console.log(`Bounding box: [${WMS_BBOX.join(', ')}]`);
+    console.log(`Output directory: ${outputBaseDir}`);
+    console.log(`Image dimensions: ${width}x${config.height}`);
+    console.log(`Bounding box: [${config.bbox.join(', ')}]`);
+    console.log(`Layers: ${config.layers.map(l => l.id).join(', ')}`);
     console.log('');
 
     // Create output directory for this run
-    const outputDir = path.join(SATELLITE_DIR, datePart, timePart);
+    const outputDir = path.join(outputBaseDir, datePart, timePart);
     fs.mkdirSync(outputDir, { recursive: true });
 
-    // Load existing metadata
-    const metadata = loadMetadata();
     const newImages: SatelliteImageEntry[] = [];
 
     // Download each layer
-    for (let i = 0; i < WMS_LAYERS.length; i++) {
-      const layerConfig = WMS_LAYERS[i];
+    for (let i = 0; i < config.layers.length; i++) {
+      const layerConfig = config.layers[i];
       console.log(`${i + 1}. Downloading ${layerConfig.name}...`);
 
       const filename = `satellite_${layerConfig.id}.png`;
@@ -188,6 +202,9 @@ async function main(): Promise<void> {
       const success = await downloadSatelliteImage(
         layerConfig.url,
         layerConfig.layer,
+        config.bbox,
+        width,
+        config.height,
         outputPath
       );
 
@@ -199,9 +216,11 @@ async function main(): Promise<void> {
           layer_name: layerConfig.name,
           timestamp,
           date: dateStr,
-          bbox: WMS_BBOX,
-          width: WMS_WIDTH,
-          height: WMS_HEIGHT,
+          config: {
+            bbox: config.bbox,
+            width,
+            height: config.height,
+          },
         };
 
         newImages.push(imageEntry);

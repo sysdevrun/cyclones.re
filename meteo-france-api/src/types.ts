@@ -191,6 +191,28 @@ export type ApiData = FetchSnapshot[];
 
 // ============ Satellite Metadata Types (for fetch_satellite.ts) ============
 
+export interface SatelliteLayerConfig {
+  /** Layer identifier */
+  id: string;
+  /** Display name */
+  name: string;
+  /** WMS endpoint URL */
+  url: string;
+  /** WMS layer name */
+  layer: string;
+}
+
+export interface SatelliteFetchConfig {
+  /** Bounding box [minLon, minLat, maxLon, maxLat] */
+  bbox: [number, number, number, number];
+  /** Image height in pixels (width computed from aspect ratio) */
+  height: number;
+  /** Output directory relative to script location */
+  output_dir: string;
+  /** WMS layers to fetch */
+  layers: SatelliteLayerConfig[];
+}
+
 export interface SatelliteImageEntry {
   /** Unique identifier for this image */
   id: string;
@@ -204,12 +226,12 @@ export interface SatelliteImageEntry {
   timestamp: number;
   /** Human-readable date string */
   date: string;
-  /** Bounding box [minLon, minLat, maxLon, maxLat] */
-  bbox: [number, number, number, number];
-  /** Image width in pixels */
-  width: number;
-  /** Image height in pixels */
-  height: number;
+  /** Config used to fetch this image */
+  config: {
+    bbox: [number, number, number, number];
+    width: number;
+    height: number;
+  };
 }
 
 export interface SatelliteMetadata {
@@ -219,14 +241,9 @@ export interface SatelliteMetadata {
   last_updated_date: string;
   /** Total number of images */
   total_images: number;
-  /** Image configuration */
-  config: {
-    bbox: [number, number, number, number];
-    width: number;
-    height: number;
-    layers: string[];
-  };
-  /** All satellite images indexed by timestamp */
+  /** Fetch configuration - script reads this on startup */
+  config: SatelliteFetchConfig;
+  /** All satellite images */
   images: SatelliteImageEntry[];
 }
 
