@@ -2,7 +2,8 @@ import { useState, useCallback } from 'react';
 import { useCycloneData } from './hooks/useCycloneData';
 import { useAnimation } from './hooks/useAnimation';
 import { CycloneMap } from './components/CycloneMap';
-import { Controls } from './components/Controls';
+import { PlaybackButtons } from './components/PlaybackButtons';
+import { ConfigurationPanel } from './components/ConfigurationPanel';
 import { ReportSection } from './components/ReportSection';
 import { LoadingOverlay } from './components/LoadingOverlay';
 
@@ -50,48 +51,24 @@ function App() {
 
         {/* Data source */}
         <div className="text-center mb-4 text-gray-600">
-          Donnees{' '}
+          Données{' '}
           <a
             href="https://meteofrance.re/fr/cyclone"
             target="_blank"
             rel="noopener noreferrer"
             className="text-primary-500 hover:underline font-medium"
           >
-            Meteo-France
+            Météo-France
           </a>
-        </div>
-
-        {/* Controls */}
-        <Controls
-          isPlaying={animation.isPlaying}
-          isLooping={animation.isLooping}
-          speed={animation.speed}
-          currentIndex={animation.currentIndex}
-          totalFrames={metadata.length}
-          onPlayPause={animation.togglePlayPause}
-          onRestart={animation.restart}
-          onToggleLoop={animation.toggleLoop}
-          onSpeedChange={animation.updateSpeed}
-          onFrameChange={animation.goToFrame}
-          ir108Enabled={ir108Enabled}
-          rgbEnabled={rgbEnabled}
-          ir108Available={!!currentMetadata?.satellite_ir108}
-          rgbAvailable={!!currentMetadata?.satellite_rgb_naturalenhncd}
-          onIr108Toggle={setIr108Enabled}
-          onRgbToggle={setRgbEnabled}
-          disabled={isLoading || !!error}
-        />
-
-        {/* Cyclone names and date above map */}
-        <div className="text-center my-4">
-          {cycloneNames && (
-            <div className="text-xl font-semibold text-gray-800">
-              {cycloneNames}
-            </div>
-          )}
-          <div className="text-lg text-gray-600">
-            {currentSnapshot?.date || 'Loading...'}
-          </div>
+          {' '}- conçu par{' '}
+          <a
+            href="https://www.sys-dev-run.fr/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary-500 hover:underline font-medium"
+          >
+            SysDevRun
+          </a>
         </div>
 
         {/* Map Container */}
@@ -118,9 +95,46 @@ function App() {
           )}
         </div>
 
-        {/* Frame Counter below the map */}
-        <div className="text-center text-gray-600 text-sm mt-3">
-          Frame: <strong>{animation.currentIndex + 1} / {metadata.length}</strong>
+        {/* Cyclone names and date below map */}
+        <div className="text-center my-4">
+          {cycloneNames && (
+            <div className="text-xl font-semibold text-gray-800">
+              {cycloneNames}
+            </div>
+          )}
+          <div className="text-lg text-gray-600">
+            {currentSnapshot?.date || 'Loading...'}
+          </div>
+        </div>
+
+        {/* Playback Buttons */}
+        <div className="mb-4">
+          <PlaybackButtons
+            isPlaying={animation.isPlaying}
+            isLooping={animation.isLooping}
+            onPlayPause={animation.togglePlayPause}
+            onRestart={animation.restart}
+            onToggleLoop={animation.toggleLoop}
+            disabled={isLoading || !!error}
+          />
+        </div>
+
+        {/* Configuration Panel */}
+        <div className="mb-4">
+          <ConfigurationPanel
+            speed={animation.speed}
+            currentIndex={animation.currentIndex}
+            totalFrames={metadata.length}
+            onSpeedChange={animation.updateSpeed}
+            onFrameChange={animation.goToFrame}
+            ir108Enabled={ir108Enabled}
+            rgbEnabled={rgbEnabled}
+            ir108Available={!!currentMetadata?.satellite_ir108}
+            rgbAvailable={!!currentMetadata?.satellite_rgb_naturalenhncd}
+            onIr108Toggle={setIr108Enabled}
+            onRgbToggle={setRgbEnabled}
+            disabled={isLoading || !!error}
+          />
         </div>
 
         {/* Report Section */}
