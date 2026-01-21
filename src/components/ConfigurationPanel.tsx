@@ -6,10 +6,12 @@ interface ConfigurationPanelProps {
   onFrameChange: (index: number) => void;
   ir108Enabled: boolean;
   rgbEnabled: boolean;
+  bordersEnabled: boolean;
   ir108Available: boolean;
   rgbAvailable: boolean;
   onIr108Toggle: (enabled: boolean) => void;
   onRgbToggle: (enabled: boolean) => void;
+  onBordersToggle: (enabled: boolean) => void;
   disabled: boolean;
 }
 
@@ -21,10 +23,12 @@ export function ConfigurationPanel({
   onFrameChange,
   ir108Enabled,
   rgbEnabled,
+  bordersEnabled,
   ir108Available,
   rgbAvailable,
   onIr108Toggle,
   onRgbToggle,
+  onBordersToggle,
   disabled,
 }: ConfigurationPanelProps) {
   return (
@@ -71,7 +75,7 @@ export function ConfigurationPanel({
       </div>
 
       {/* Satellite Layers */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-center gap-3 flex-wrap mb-4">
         <label className="font-semibold text-gray-700 min-w-[120px]">
           Satellite layers:
         </label>
@@ -99,6 +103,24 @@ export function ConfigurationPanel({
             <span className={`text-sm ${rgbAvailable ? 'text-green-600' : 'text-red-500'}`}>
               ({rgbAvailable ? 'available' : 'unavailable'})
             </span>
+          </label>
+        </div>
+      </div>
+
+      {/* Map Overlays */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <label className="font-semibold text-gray-700 min-w-[120px]">
+          Map overlays:
+        </label>
+        <div className="flex gap-5 flex-wrap">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={bordersEnabled}
+              onChange={(e) => onBordersToggle(e.target.checked)}
+              className="w-4 h-4 accent-primary-500 cursor-pointer"
+            />
+            <span className="text-gray-700">Borders & Coastlines</span>
           </label>
         </div>
       </div>

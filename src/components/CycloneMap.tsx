@@ -13,6 +13,7 @@ interface CycloneMapProps {
   rgbData: SatelliteImageData | null;
   ir108Enabled: boolean;
   rgbEnabled: boolean;
+  bordersEnabled: boolean;
   initialFit: boolean;
   onInitialFitDone: () => void;
 }
@@ -148,6 +149,7 @@ export function CycloneMap({
   rgbData,
   ir108Enabled,
   rgbEnabled,
+  bordersEnabled,
   initialFit,
   onInitialFitDone,
 }: CycloneMapProps) {
@@ -220,6 +222,15 @@ export function CycloneMap({
             bounds={bboxToLeafletBounds(rgbData.bbox)}
             opacity={0.7}
             zIndex={2}
+          />
+        )}
+
+        {/* Borders overlay - shows coastlines and country borders on transparent background */}
+        {bordersEnabled && (
+          <TileLayer
+            url="https://tiles.stadiamaps.com/tiles/stamen_toner_lines/{z}/{x}/{y}{r}.png"
+            attribution='&copy; <a href="https://stadiamaps.com/" target="_blank">Stadia Maps</a> &copy; <a href="https://stamen.com/" target="_blank">Stamen Design</a> &copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a>'
+            opacity={0.8}
           />
         )}
 

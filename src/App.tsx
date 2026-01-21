@@ -20,6 +20,7 @@ function App() {
 
   const [ir108Enabled, setIr108Enabled] = useState(false);
   const [rgbEnabled, setRgbEnabled] = useState(false);
+  const [bordersEnabled, setBordersEnabled] = useState(false);
   const [hasInitiallyFitted, setHasInitiallyFitted] = useState(false);
 
   const handleFrameChange = useCallback((index: number) => {
@@ -80,6 +81,7 @@ function App() {
               rgbData={currentMetadata?.satellite_rgb_naturalenhncd || null}
               ir108Enabled={ir108Enabled}
               rgbEnabled={rgbEnabled}
+              bordersEnabled={bordersEnabled}
               initialFit={!hasInitiallyFitted}
               onInitialFitDone={handleInitialFitDone}
             />
@@ -129,10 +131,12 @@ function App() {
             onFrameChange={animation.goToFrame}
             ir108Enabled={ir108Enabled}
             rgbEnabled={rgbEnabled}
+            bordersEnabled={bordersEnabled}
             ir108Available={!!currentMetadata?.satellite_ir108}
             rgbAvailable={!!currentMetadata?.satellite_rgb_naturalenhncd}
             onIr108Toggle={setIr108Enabled}
             onRgbToggle={setRgbEnabled}
+            onBordersToggle={setBordersEnabled}
             disabled={isLoading || !!error}
           />
         </div>
