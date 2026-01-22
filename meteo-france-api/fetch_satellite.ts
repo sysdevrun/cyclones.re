@@ -12,7 +12,7 @@
  * Usage: tsx fetch_satellite.ts
  *
  * Cron example (every 15 minutes):
- *   */15 * * * * cd /path/to/meteo-france-api && tsx fetch_satellite.ts >> logs/satellite.log 2>&1
+ *   0,15,30,45 * * * * cd /path/to/meteo-france-api && tsx fetch_satellite.ts >> logs/satellite.log 2>&1
  */
 
 import * as fs from 'fs';
