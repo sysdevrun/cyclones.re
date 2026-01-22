@@ -83,21 +83,15 @@ function App() {
 
         {/* Map Container */}
         <div className="relative">
-          {currentSnapshot && currentSnapshot.trajectories.length > 0 ? (
-            <CycloneMap
-              trajectories={currentSnapshot.trajectories.map((t) => t.cyclone_trajectory)}
-              ir108Data={currentMetadata?.satellite_ir108 || null}
-              rgbData={currentMetadata?.satellite_rgb_naturalenhncd || null}
-              ir108Enabled={ir108Enabled}
-              rgbEnabled={rgbEnabled}
-              initialFit={!hasInitiallyFitted}
-              onInitialFitDone={handleInitialFitDone}
-            />
-          ) : (
-            <div className="h-[500px] rounded-xl bg-gray-100 flex items-center justify-center">
-              <div className="text-gray-500">Aucun cyclone actif</div>
-            </div>
-          )}
+          <CycloneMap
+            trajectories={currentSnapshot?.trajectories.map((t) => t.cyclone_trajectory) || []}
+            ir108Data={currentMetadata?.satellite_ir108 || null}
+            rgbData={currentMetadata?.satellite_rgb_naturalenhncd || null}
+            ir108Enabled={ir108Enabled}
+            rgbEnabled={rgbEnabled}
+            initialFit={!hasInitiallyFitted}
+            onInitialFitDone={handleInitialFitDone}
+          />
 
           {/* Loading overlay */}
           {isLoading && (
@@ -107,11 +101,9 @@ function App() {
 
         {/* Cyclone names and date below map */}
         <div className="text-center my-4">
-          {cycloneNames && (
-            <div className="text-xl font-semibold text-gray-800">
-              {cycloneNames}
-            </div>
-          )}
+          <div className="text-xl font-semibold text-gray-800">
+            {cycloneNames || 'Aucun cyclone actif'}
+          </div>
           <div className="text-lg text-gray-600">
             {currentSnapshot ? formatDateReunion(currentSnapshot.timestamp) : 'Chargement...'}
             {currentSnapshot && <span className="text-sm text-gray-400 ml-1">(Réunion)</span>}
