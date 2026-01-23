@@ -24,8 +24,8 @@ const METEOFRANCE_DIR = path.join(DATA_DIR, 'meteofrance');
 const BASIN = 'SWI';
 
 // WMS Configuration for satellite imagery
-// Bbox: [minLon, minLat, maxLon, maxLat] - West Africa to Indian Ocean region
-const WMS_BBOX: [number, number, number, number] = [-25, -41, 103, 21.1];
+// Bbox: [minLon, minLat, maxLon, maxLat] - Indian Ocean region
+const WMS_BBOX: [number, number, number, number] = [10.55, -41, 116, 21.1];
 
 // Convert bbox from EPSG:4326 to EPSG:3857
 function bboxToWebMercator(bbox: [number, number, number, number]): [number, number, number, number] {
