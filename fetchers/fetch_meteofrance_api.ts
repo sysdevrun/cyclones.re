@@ -23,9 +23,9 @@ const JSON_FILE = path.join(DATA_DIR, 'api_data.json');
 const METEOFRANCE_DIR = path.join(DATA_DIR, 'meteofrance');
 const BASIN = 'SWI';
 
-// WMS Configuration for Indian Ocean satellite imagery
-// Bbox: [minLon, minLat, maxLon, maxLat] - SW Indian Ocean cyclone region
-const WMS_BBOX: [number, number, number, number] = [21.1, -41, 103, 21.1];
+// WMS Configuration for satellite imagery
+// Bbox: [minLon, minLat, maxLon, maxLat] - West Africa to Indian Ocean region
+const WMS_BBOX: [number, number, number, number] = [-25, -41, 103, 21.1];
 
 // Convert bbox from EPSG:4326 to EPSG:3857
 function bboxToWebMercator(bbox: [number, number, number, number]): [number, number, number, number] {
