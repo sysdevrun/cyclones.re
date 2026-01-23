@@ -25,7 +25,7 @@ import type { SatelliteImageEntry, SatelliteMetadata, SatelliteFetchConfig } fro
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Metadata file path
-const DATA_DIR = path.join(__dirname, '..', 'data');
+const DATA_DIR = path.join(__dirname, '..', 'public', 'data');
 const METADATA_FILE = path.join(DATA_DIR, 'satellite_metadata.json');
 
 // ============ Default Configuration ============

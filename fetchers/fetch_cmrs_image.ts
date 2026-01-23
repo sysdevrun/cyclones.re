@@ -10,7 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Configuration
 const IMAGE_URL = 'http://www.meteo.fr/temps/domtom/La_Reunion/webcmrs9.0/francais/tpsreel/trajectoire.png';
-const DATA_DIR = path.join(__dirname, '..', 'data');
+const DATA_DIR = path.join(__dirname, '..', 'public', 'data');
 const BASE_DIR = path.join(DATA_DIR, 'cmrs_images');
 const JSON_FILE = path.join(DATA_DIR, 'cmrs_images.json');
 
@@ -92,7 +92,7 @@ function getImageFiles(dir: string): ImageMetadata[] {
         const timeStr = parts[1].replace('.png', '').replace(/-/g, ':'); // HH:MM:SS
 
         images.push({
-          path: `data/cmrs_images/${relativePath.replace(/\\/g, '/')}`,
+          path: `public/data/cmrs_images/${relativePath.replace(/\\/g, '/')}`,
           date: `${dateStr} ${timeStr}`,
           timestamp: Math.floor(stats.mtimeMs / 1000)
         });

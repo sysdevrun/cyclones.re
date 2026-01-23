@@ -18,7 +18,7 @@ import { WMSDownloader } from './wms-downloader/index';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Configuration
-const DATA_DIR = path.join(__dirname, '..', 'data');
+const DATA_DIR = path.join(__dirname, '..', 'public', 'data');
 const JSON_FILE = path.join(DATA_DIR, 'api_data.json');
 const METEOFRANCE_DIR = path.join(DATA_DIR, 'meteofrance');
 const BASIN = 'SWI';
