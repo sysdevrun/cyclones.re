@@ -1,45 +1,205 @@
-A GET request to https://meteofrance.re/fr/cyclone
-returns a http response with header
-set-cookie: mfsession=rlWwoTSmplV6VzyhqTIlozI0VvjvLJkaVwbvFSZlAGLvYPW0rKNvBvWXI1DvsD.rlWdqTxvBvVmZTIzAQyzBQSvBTL3ZmpkBJLkLJMvAmL2AQIuZmAxAFVfVzyuqPV6ZGp2BQH4ZGtlAK0.Oe2i1GpacFlIxc1Q_F1N8S3xxhbB3-cxbeH-18tCA5N; Path=/; Max-Age=3600; SameSite=None; Secure
+# Meteo France Cyclone API Library
 
-The value of mfsession is decoded with
-                this.token = o.replace(/[a-zA-Z]/g, function(e) {
-                    var t = e <= "Z" ? 65 : 97;
-                    return String.fromCharCode(t + (e.charCodeAt(0) - t + 13) % 26)
-                })
+A TypeScript library for accessing the Meteo France cyclone tracking API, providing real-time data about tropical cyclones in various ocean basins.
 
-This token must be passed as:
-curl 'https://rpcache-aa.meteofrance.com/internet2018client/2.0/cyclone/list?basin=SWI&season=20252026&current=current' \
-  -H 'Accept: */*' \
-  -H 'Accept-Language: en-US,en;q=0.9,fr-FR;q=0.8,fr;q=0.7' \
-  -H 'Authorization: Bearer eyJjbGFzcyI6ImludGVybmV0IiwiYWxnIjoiSFMyNTYiLCJ0eXAiOiJKV1QifQ.eyJqdGkiOiIzMGVmNDlmODFiOGY3MzcxOWYxYWZiNzY2NDVhMzNkNSIsImlhdCI6MTc2ODU4MTgyNX0.Br2v1TcnpSyVkp1D_S1A8F3kkuoO3-pkorU-18gPN5A' \
-  -H 'Connection: keep-alive' \
-  -H 'DNT: 1' \
-  -H 'Origin: https://meteofrance.re' \
-  -H 'Referer: https://meteofrance.re/' \
-  -H 'Sec-Fetch-Dest: empty' \
-  -H 'Sec-Fetch-Mode: cors' \
-  -H 'Sec-Fetch-Site: cross-site' \
-  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36' \
-  -H 'sec-ch-ua: "Google Chrome";v="143", "Chromium";v="143", "Not A(Brand";v="24"' \
-  -H 'sec-ch-ua-mobile: ?0' \
-  -H 'sec-ch-ua-platform: "macOS"'
+## Installation
 
-This returns
-{
-    "basin": "SWI",
-    "season": "20252026",
-    "cyclone_list": {
-        "SWI$06/20252026": {
-            "cyclone_name": "DUDZAI",
-            "cyclone_id": "SWI$06/20252026",
-            "current": true,
-            "reference_time": "2026-01-16T12:00:00Z"
-        }
-    }
+```bash
+npm install
+npm run build
+```
+
+## Quick Start
+
+```typescript
+import { createClient } from 'meteo-france-cyclone-api';
+
+const client = createClient();
+
+// List current cyclones in South-West Indian Ocean
+const cyclones = await client.listCyclones('SWI', '20252026');
+console.log(cyclones.cyclone_list);
+
+// Get trajectory for a specific cyclone
+const trajectory = await client.getCycloneTrajectory('SWI$06/20252026');
+console.log(trajectory.cyclone_trajectory.cyclone_name);
+```
+
+## Architecture
+
+### Files Structure
+
+```
+meteo-france-api/
+├── src/
+│   ├── index.ts      # Main entry point, re-exports all modules
+│   ├── client.ts     # API client implementation
+│   └── types.ts      # TypeScript type definitions
+├── package.json
+├── tsconfig.json
+└── CLAUDE.md
+```
+
+### Authentication Flow
+
+1. The client fetches `https://meteofrance.re/fr/cyclone`
+2. The server returns a `Set-Cookie` header with an encoded `mfsession` token
+3. The token is decoded using ROT13 (a simple letter rotation cipher)
+4. The decoded token is used as a Bearer token for API requests
+
+### Token Decoding
+
+The `mfsession` cookie is encoded with ROT13:
+```typescript
+function decodeToken(encodedToken: string): string {
+  return encodedToken.replace(/[a-zA-Z]/g, (char) => {
+    const base = char <= 'Z' ? 65 : 97;
+    return String.fromCharCode(base + (char.charCodeAt(0) - base + 13) % 26);
+  });
 }
+```
 
-And to fetch details for a specific cyclone, call with same headers:
-https://rpcache-aa.meteofrance.com/internet2018client/2.0/cyclone/trajectory?cyclone_id=SWI%2406%2F20252026
-It creates trajectory.json file
+## API Reference
 
+### `createClient(options?)`
+
+Creates a new API client instance.
+
+**Options:**
+- `fetch?: typeof fetch` - Custom fetch implementation
+- `userAgent?: string` - Custom User-Agent string
+
+### `client.listCyclones(basin, season, current?)`
+
+Lists cyclones for a given basin and season.
+
+**Parameters:**
+- `basin: string` - Basin code (e.g., `'SWI'` for South-West Indian Ocean)
+- `season: string` - Season in format `YYYYYYYY` (e.g., `'20252026'`)
+- `current?: 'current' | 'all'` - Filter for current cyclones only (default: `'current'`)
+
+**Returns:** `CycloneListResponse`
+
+### `client.getCycloneTrajectory(cycloneId)`
+
+Gets detailed trajectory data for a specific cyclone.
+
+**Parameters:**
+- `cycloneId: string` - Cyclone ID (e.g., `'SWI$06/20252026'`)
+
+**Returns:** `CycloneTrajectoryResponse`
+
+### `client.getToken()`
+
+Manually fetches and returns a new authentication token.
+
+### `client.setToken(token)`
+
+Sets a pre-existing token (useful for testing or caching).
+
+## Types
+
+### Basin Codes
+
+- `SWI` - South-West Indian Ocean
+- `ATL` - Atlantic
+- `PAC` - Pacific
+
+### Feature Types in Trajectory
+
+The trajectory response contains a GeoJSON FeatureCollection with three types of features:
+
+1. **`analysis`** - Historical observed positions with full cyclone data
+2. **`forecast`** - Predicted future positions with expected intensity
+3. **`uncertainty_cone`** - Polygon representing forecast uncertainty area
+
+### Cyclone Development Stages
+
+```typescript
+type CycloneDevelopment =
+  | 'disturbance'
+  | 'tropical disturbance'
+  | 'tropical depression'
+  | 'moderate tropical storm'
+  | 'severe tropical storm'
+  | 'tropical cyclone'
+  | 'intense tropical cyclone'
+  | 'post-tropical depression';
+```
+
+### Type Guards
+
+The library provides type guards for working with trajectory features:
+
+```typescript
+import {
+  isAnalysisFeature,
+  isForecastFeature,
+  isUncertaintyConeFeature,
+} from 'meteo-france-cyclone-api';
+
+for (const feature of trajectory.features) {
+  if (isAnalysisFeature(feature)) {
+    // feature.properties.cyclone_data is available
+    console.log(feature.properties.cyclone_data.development);
+  }
+}
+```
+
+## API Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /cyclone/list` | List cyclones by basin and season |
+| `GET /cyclone/trajectory` | Get trajectory data for a cyclone |
+
+### Base URLs
+
+- Session: `https://meteofrance.re/fr/cyclone`
+- API: `https://rpcache-aa.meteofrance.com/internet2018client/2.0`
+
+## Example: Filtering Trajectory Data
+
+```typescript
+import {
+  createClient,
+  isAnalysisFeature,
+  isForecastFeature,
+} from 'meteo-france-cyclone-api';
+
+const client = createClient();
+const { cyclone_trajectory } = await client.getCycloneTrajectory('SWI$06/20252026');
+
+// Get only analysis (historical) points
+const analysisPoints = cyclone_trajectory.features.filter(isAnalysisFeature);
+
+// Get maximum recorded wind speed
+const maxWind = Math.max(
+  ...analysisPoints.map(f => f.properties.cyclone_data.maximum_wind.wind_speed_kt)
+);
+
+// Get only forecast points
+const forecastPoints = cyclone_trajectory.features.filter(isForecastFeature);
+```
+
+## Error Handling
+
+The client throws errors for:
+- Failed token retrieval
+- API authentication failures (401)
+- General HTTP errors
+
+```typescript
+try {
+  const data = await client.listCyclones('SWI', '20252026');
+} catch (error) {
+  if (error.message.includes('token may be expired')) {
+    // Token expired, client will auto-refresh on next request
+  }
+}
+```
+
+## Requirements
+
+- Node.js >= 18.0.0 (for native fetch support)
+- Or provide a custom fetch implementation for older environments
