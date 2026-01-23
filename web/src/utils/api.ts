@@ -37,7 +37,7 @@ export async function fetchSnapshotData(metadata: SnapshotMetadata): Promise<Loa
   // Fetch trajectories
   const trajectories: CycloneTrajectoryFile[] = [];
   for (const trajectoryFile of metadata.trajectory_files) {
-    const response = await fetch(`${API_BASE_URL}/data/${trajectoryFile}`);
+    const response = await fetch(`${API_BASE_URL}/${trajectoryFile}`);
     if (response.ok) {
       const trajectory = await response.json();
       trajectories.push(trajectory);
@@ -47,7 +47,7 @@ export async function fetchSnapshotData(metadata: SnapshotMetadata): Promise<Loa
   // Fetch report if available
   let report: CycloneReport | null = null;
   if (metadata.report_file) {
-    const response = await fetch(`${API_BASE_URL}/data/${metadata.report_file}`);
+    const response = await fetch(`${API_BASE_URL}/${metadata.report_file}`);
     if (response.ok) {
       report = await response.json();
     }
@@ -69,7 +69,7 @@ export async function fetchSnapshotData(metadata: SnapshotMetadata): Promise<Loa
 
 // Get satellite image URL
 export function getSatelliteImageUrl(filePath: string): string {
-  return `${API_BASE_URL}/data/${filePath}`;
+  return `${API_BASE_URL}/${filePath}`;
 }
 
 // Convert bbox [minLon, minLat, maxLon, maxLat] to Leaflet bounds
