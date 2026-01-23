@@ -18,6 +18,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import proj4 from 'proj4';
 import { WMSDownloader } from '../wms-downloader/index';
 import type { SatelliteImageEntry, SatelliteMetadata, SatelliteFetchConfig } from './src/index.js';
 
@@ -29,6 +30,7 @@ const METADATA_FILE = path.join(DATA_DIR, 'satellite_metadata.json');
 
 // ============ Default Configuration ============
 
+// Bounding box [minLon, minLat, maxLon, maxLat] in degrees
 const DEFAULT_CONFIG: SatelliteFetchConfig = {
   bbox: [21.1, -41, 103, 21.1],
   height: 1000,
@@ -49,14 +51,23 @@ const DEFAULT_CONFIG: SatelliteFetchConfig = {
   ],
 };
 
+// Convert bbox from EPSG:4326 to EPSG:3857
+function bboxToWebMercator(bbox: [number, number, number, number]): [number, number, number, number] {
+  const [minLon, minLat, maxLon, maxLat] = bbox;
+  const [minX, minY] = proj4('EPSG:4326', 'EPSG:3857', [minLon, minLat]);
+  const [maxX, maxY] = proj4('EPSG:4326', 'EPSG:3857', [maxLon, maxLat]);
+  return [minX, minY, maxX, maxY];
+}
+
 // ============ Utility Functions ============
 
 /**
  * Compute image width from bbox and height to maintain aspect ratio
+ * Uses Web Mercator projection for accurate aspect ratio
  */
 function computeWidth(bbox: [number, number, number, number], height: number): number {
-  const [minLon, minLat, maxLon, maxLat] = bbox;
-  return Math.round(height * (maxLon - minLon) / (maxLat - minLat));
+  const [minX, minY, maxX, maxY] = bboxToWebMercator(bbox);
+  return Math.round(height * (maxX - minX) / (maxY - minY));
 }
 
 /**
@@ -129,6 +140,7 @@ function saveMetadata(metadata: SatelliteMetadata): void {
 
 /**
  * Download a satellite image from WMS
+ * @param bbox - Bounding box [minLon, minLat, maxLon, maxLat] in degrees
  */
 async function downloadSatelliteImage(
   wmsUrl: string,
@@ -141,13 +153,17 @@ async function downloadSatelliteImage(
   try {
     const downloader = new WMSDownloader(wmsUrl);
 
+    // Convert to Web Mercator for WMS request
+    const bbox3857 = bboxToWebMercator(bbox);
+
     await downloader.downloadToFile({
       layers: layer,
-      bbox,
+      bbox: bbox3857,
       width,
       height,
       format: 'image/png',
       transparent: 'true',
+      crs: 'EPSG:3857',
     }, outputPath);
 
     return true;

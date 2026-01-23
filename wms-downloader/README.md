@@ -85,6 +85,35 @@ const imageBuffer = await downloader.getMap({
 });
 ```
 
+### CRS Considerations for Web Maps
+
+When fetching images to display on web maps (Leaflet, OpenLayers, etc.), the CRS matters:
+
+| Map Library | Tile CRS | API Coordinates | Image CRS for Correct Alignment |
+|-------------|----------|-----------------|--------------------------------|
+| Leaflet     | EPSG:3857 | EPSG:4326 (degrees) | **EPSG:3857** |
+| OpenLayers  | EPSG:3857 | Configurable | Match map projection |
+
+**Why this matters**: Web maps use Web Mercator (EPSG:3857) tiles. If you fetch WMS images in EPSG:4326 (equirectangular) and overlay them using corner coordinates, the image will be linearly stretched, causing distortion (especially at high latitudes).
+
+**Solution**: Request images in EPSG:3857, then position using degree-based bounds. Use `proj4` to convert bbox:
+
+```typescript
+import proj4 from 'proj4';
+
+const bbox4326 = [21.1, -41, 103, 21.1];  // [minLon, minLat, maxLon, maxLat]
+const [minX, minY] = proj4('EPSG:4326', 'EPSG:3857', [bbox4326[0], bbox4326[1]]);
+const [maxX, maxY] = proj4('EPSG:4326', 'EPSG:3857', [bbox4326[2], bbox4326[3]]);
+
+await downloader.downloadToFile({
+  layers: 'ir108',
+  bbox: [minX, minY, maxX, maxY],  // EPSG:3857 meters
+  crs: 'EPSG:3857',
+  width: 1024,
+  height: 512
+}, 'output.png');
+```
+
 ## API Reference
 
 ### WMSDownloader

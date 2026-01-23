@@ -45,9 +45,20 @@ Each satellite image in `api_data.json` has:
 ```typescript
 interface SatelliteImageData {
   file: string;                              // Path to image file
-  bbox: [number, number, number, number];    // [minLon, minLat, maxLon, maxLat]
+  bbox: [number, number, number, number];    // [minLon, minLat, maxLon, maxLat] in degrees
 }
 ```
+
+### Coordinate Reference Systems (CRS)
+
+Leaflet uses **EPSG:3857 (Web Mercator)** for its tile layers (OpenStreetMap, etc.), but its API accepts coordinates in **EPSG:4326 (degrees)**.
+
+For satellite images to align correctly with the basemap:
+1. **Metadata** stores bbox in EPSG:4326 degrees (human-readable, Leaflet API compatible)
+2. **Images** are fetched from WMS in EPSG:3857 projection (matches Web Mercator tiles)
+3. **Leaflet** uses the degree-based bounds to position the pre-projected image
+
+If images were fetched in EPSG:4326 (equirectangular), Leaflet would linearly stretch them to fit the bounds, causing north/south distortion on a Web Mercator map.
 
 ### Rendering Pipeline
 

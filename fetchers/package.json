@@ -33,10 +33,12 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@camptocamp/ogc-client": "^1.2.0"
+    "@camptocamp/ogc-client": "^1.2.0",
+    "proj4": "^2.20.2"
   },
   "devDependencies": {
     "@types/node": "^25.0.10",
+    "@types/proj4": "^2.5.6",
     "tsx": "^4.21.0",
     "typescript": "^5.3.0"
   },

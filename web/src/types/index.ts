@@ -10,7 +10,7 @@ export interface SnapshotMetadata {
 
 export interface SatelliteImageData {
   file: string;
-  bbox: [number, number, number, number]; // [minLon, minLat, maxLon, maxLat]
+  bbox: [number, number, number, number]; // [minLon, minLat, maxLon, maxLat] in degrees
 }
 
 // Cyclone trajectory data

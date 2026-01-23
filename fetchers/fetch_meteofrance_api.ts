@@ -3,6 +3,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import proj4 from 'proj4';
 import {
   createClient,
   CycloneListResponse,
@@ -26,10 +27,18 @@ const BASIN = 'SWI';
 // Bbox: [minLon, minLat, maxLon, maxLat] - SW Indian Ocean cyclone region
 const WMS_BBOX: [number, number, number, number] = [21.1, -41, 103, 21.1];
 
-// Compute dimensions dynamically from bbox to maintain correct aspect ratio
+// Convert bbox from EPSG:4326 to EPSG:3857
+function bboxToWebMercator(bbox: [number, number, number, number]): [number, number, number, number] {
+  const [minLon, minLat, maxLon, maxLat] = bbox;
+  const [minX, minY] = proj4('EPSG:4326', 'EPSG:3857', [minLon, minLat]);
+  const [maxX, maxY] = proj4('EPSG:4326', 'EPSG:3857', [maxLon, maxLat]);
+  return [minX, minY, maxX, maxY];
+}
+
+// Compute dimensions using Web Mercator for correct aspect ratio
 const WMS_HEIGHT = 1000;
-const WMS_WIDTH = Math.round(WMS_HEIGHT * (WMS_BBOX[2] - WMS_BBOX[0]) / (WMS_BBOX[3] - WMS_BBOX[1]));
-// With bbox [21.1, -41, 103, 21.1]: lonRange=81.9, latRange=62.1, aspect=1.319, width≈1319
+const WMS_BBOX_3857 = bboxToWebMercator(WMS_BBOX);
+const WMS_WIDTH = Math.round(WMS_HEIGHT * (WMS_BBOX_3857[2] - WMS_BBOX_3857[0]) / (WMS_BBOX_3857[3] - WMS_BBOX_3857[1]));
 
 // IR108 infrared channel
 const WMS_IR108_URL = 'https://view.eumetsat.int/geoserver/msg_iodc/ir108/ows';
@@ -121,11 +130,12 @@ async function downloadSatelliteImage(
 
     await downloader.downloadToFile({
       layers: layer,
-      bbox: WMS_BBOX,
+      bbox: WMS_BBOX_3857,
       width: WMS_WIDTH,
       height: WMS_HEIGHT,
       format: 'image/png',
       transparent: 'true',
+      crs: 'EPSG:3857',
     }, outputPath);
 
     return {

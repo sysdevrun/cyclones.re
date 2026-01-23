@@ -203,7 +203,7 @@ export interface SatelliteLayerConfig {
 }
 
 export interface SatelliteFetchConfig {
-  /** Bounding box [minLon, minLat, maxLon, maxLat] */
+  /** Bounding box [minLon, minLat, maxLon, maxLat] in degrees */
   bbox: [number, number, number, number];
   /** Image height in pixels (width computed from aspect ratio) */
   height: number;
@@ -228,6 +228,7 @@ export interface SatelliteImageEntry {
   date: string;
   /** Config used to fetch this image */
   config: {
+    /** Bounding box [minLon, minLat, maxLon, maxLat] in degrees */
     bbox: [number, number, number, number];
     width: number;
     height: number;

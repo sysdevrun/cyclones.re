@@ -72,7 +72,7 @@ export function getSatelliteImageUrl(filePath: string): string {
   return `${API_BASE_URL}/${filePath}`;
 }
 
-// Convert bbox [minLon, minLat, maxLon, maxLat] to Leaflet bounds
+// Convert bbox [minLon, minLat, maxLon, maxLat] to Leaflet bounds [[minLat, minLon], [maxLat, maxLon]]
 export function bboxToLeafletBounds(bbox: [number, number, number, number]): [[number, number], [number, number]] {
   const [minLon, minLat, maxLon, maxLat] = bbox;
   return [[minLat, minLon], [maxLat, maxLon]];
