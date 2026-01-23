@@ -8,7 +8,7 @@ export AWS_PROFILE="cyclones-backup"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-DATA_DIR="$PROJECT_ROOT/web/public/data"
+DATA_DIR="$PROJECT_ROOT/public/data"
 BUCKET_NAME="cyclones-re-backup"
 REGION="eu-west-3"
 
