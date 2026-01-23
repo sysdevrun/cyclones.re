@@ -23,7 +23,7 @@ server {
 	ssl_certificate /etc/nginx/tls/_.sys-dev-run.fr.crt;
 	ssl_certificate_key /etc/nginx/tls/_.sys-dev-run.fr.key;
 
-	root /home/chtitux/wd/meteo-cyclone-animation;
+	root /home/chtitux/wd/cyclones.re/public;
 
 	index index.html;
 	access_log /var/log/nginx/cmrs.sys-dev-run.fr_access.log;
