@@ -70,7 +70,8 @@ function App() {
           >
             EUMETSAT
           </a>
-          {' '}- conçu par{' '}
+          <br />
+          Conçu par{' '}
           <a
             href="https://www.sys-dev-run.fr/"
             target="_blank"
