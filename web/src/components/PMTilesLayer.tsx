@@ -12,7 +12,7 @@ interface PMTilesLayerProps {
   zIndex: number;
 }
 
-const layerStyles: Record<LayerType, () => PaintRule> = {
+const layerStyles: Record<LayerType, () => PaintRule | PaintRule[]> = {
   water: () => ({
     dataLayer: 'water',
     symbolizer: new PolygonSymbolizer({
@@ -20,15 +20,28 @@ const layerStyles: Record<LayerType, () => PaintRule> = {
       stroke: 'transparent',
     }),
   }),
-  earth: () => ({
-    dataLayer: 'earth',
-    symbolizer: new PolygonSymbolizer({
-      fill: 'transparent',
-      stroke: '#333333',
-      width: 1,
-      opacity: 1,
-    }),
-  }),
+  earth: () => [
+    // White outline (wider, rendered first)
+    {
+      dataLayer: 'earth',
+      symbolizer: new PolygonSymbolizer({
+        fill: 'transparent',
+        stroke: 'rgba(255, 255, 255, 0.7)',
+        width: 3,
+        opacity: 1,
+      }),
+    },
+    // Dark stroke on top (thinner)
+    {
+      dataLayer: 'earth',
+      symbolizer: new PolygonSymbolizer({
+        fill: 'transparent',
+        stroke: '#333333',
+        width: 1,
+        opacity: 1,
+      }),
+    },
+  ],
   boundaries: () => ({
     dataLayer: 'boundaries',
     symbolizer: new LineSymbolizer({
@@ -49,7 +62,7 @@ export function PMTilesLayer({ url, layers, pane, zIndex }: PMTilesLayerProps) {
       customPane.style.zIndex = String(zIndex);
     }
 
-    const paintRules: PaintRule[] = layers.map(layer => layerStyles[layer]());
+    const paintRules: PaintRule[] = layers.flatMap(layer => layerStyles[layer]());
 
     const layer = leafletLayer({
       url,
