@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useCycloneData } from './hooks/useCycloneData';
 import { useAnimation } from './hooks/useAnimation';
 import { formatDateReunion } from './utils/api';
@@ -19,9 +19,10 @@ function App() {
     loadSnapshot,
   } = useCycloneData();
 
-  const [ir108Enabled, setIr108Enabled] = useState(false);
-  const [rgbEnabled, setRgbEnabled] = useState(false);
+  const [ir108Enabled, setIr108Enabled] = useState(true);
+  const [rgbEnabled, setRgbEnabled] = useState(true);
   const [hasInitiallyFitted, setHasInitiallyFitted] = useState(false);
+  const [hasAutoPlayed, setHasAutoPlayed] = useState(false);
 
   const handleFrameChange = useCallback((index: number) => {
     loadSnapshot(index);
@@ -31,6 +32,14 @@ function App() {
     totalFrames: metadata.length,
     onFrameChange: handleFrameChange,
   });
+
+  // Auto-play animation when data is loaded
+  useEffect(() => {
+    if (!hasAutoPlayed && metadata.length > 0 && currentSnapshot && !isLoading) {
+      animation.play();
+      setHasAutoPlayed(true);
+    }
+  }, [hasAutoPlayed, metadata.length, currentSnapshot, isLoading, animation]);
 
   const handleInitialFitDone = useCallback(() => {
     setHasInitiallyFitted(true);
