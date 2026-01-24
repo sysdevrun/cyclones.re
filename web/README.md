@@ -35,6 +35,58 @@ src/
 3. Satellite images (IR108, RGB) are loaded as Leaflet overlays
 4. `useAnimation` handles playback through historical snapshots
 
+## Data Prefetching
+
+The app prefetches all data before starting the animation to ensure smooth playback without loading delays.
+
+### How It Works
+
+```
+App Start
+    │
+    ▼
+Load api_data.json (metadata index)
+    │
+    ▼
+Prefetch All Data in Parallel ─────────────────────┐
+    │                                              │
+    ├── Snapshot 1: JSON data + satellite images   │
+    ├── Snapshot 2: JSON data + satellite images   │
+    ├── ...                                        │ Progress bar shown
+    └── Snapshot N: JSON data + satellite images   │
+                                                   │
+    ▼ ◄────────────────────────────────────────────┘
+All data cached in memory + browser cache
+    │
+    ▼
+Animation starts (no loading delays)
+```
+
+### Implementation Details
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| `useCycloneData` | `hooks/useCycloneData.ts` | Orchestrates prefetching with progress tracking |
+| `fetchSnapshotData` | `utils/api.ts` | Fetches trajectory JSON with in-memory cache |
+| `preloadImage` | `utils/imagePreloader.ts` | Preloads satellite images into browser cache |
+| `LoadingOverlay` | `components/LoadingOverlay.tsx` | Displays progress bar during prefetch |
+
+### Prefetch Sequence
+
+1. **Metadata fetch** - Load `api_data.json` to get list of all snapshots
+2. **Parallel prefetch** - For each snapshot, fetch in parallel:
+   - Trajectory JSON files (cached in memory via `Map`)
+   - Satellite images IR108 and RGB (cached in browser via `new Image()`)
+3. **Progress updates** - UI shows `X/N` snapshots loaded with progress bar
+4. **Animation ready** - Once all data is cached, animation starts
+
+### Benefits
+
+- **Smooth animation**: No jank or loading delays during playback
+- **Instant frame changes**: All data served from cache
+- **Parallel loading**: Maximizes network utilization
+- **Progress feedback**: User sees loading progress with percentage
+
 ## Satellite Image Positioning
 
 Satellite images are geo-referenced using a bounding box and displayed as Leaflet `ImageOverlay` layers.

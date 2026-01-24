@@ -15,6 +15,7 @@ function App() {
     currentMetadata,
     isLoading,
     loadingMessage,
+    loadingProgress,
     error,
     loadSnapshot,
   } = useCycloneData();
@@ -105,7 +106,7 @@ function App() {
 
           {/* Loading overlay */}
           {isLoading && (
-            <LoadingOverlay message={loadingMessage} error={error} />
+            <LoadingOverlay message={loadingMessage} progress={loadingProgress} error={error} />
           )}
         </div>
 

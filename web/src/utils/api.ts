@@ -34,15 +34,17 @@ export async function fetchSnapshotData(metadata: SnapshotMetadata): Promise<Loa
     return cached;
   }
 
-  // Fetch trajectories
-  const trajectories: CycloneTrajectoryFile[] = [];
-  for (const trajectoryFile of metadata.trajectory_files) {
+  // Fetch trajectories in parallel
+  const trajectoryPromises = metadata.trajectory_files.map(async (trajectoryFile) => {
     const response = await fetch(`${API_BASE_URL}/${trajectoryFile}`);
     if (response.ok) {
-      const trajectory = await response.json();
-      trajectories.push(trajectory);
+      return response.json() as Promise<CycloneTrajectoryFile>;
     }
-  }
+    return null;
+  });
+
+  const trajectoryResults = await Promise.all(trajectoryPromises);
+  const trajectories = trajectoryResults.filter((t): t is CycloneTrajectoryFile => t !== null);
 
   // Fetch report if available
   let report: CycloneReport | null = null;
@@ -83,4 +85,22 @@ export function formatDateReunion(timestamp: number): string {
   const date = new Date(timestamp * 1000);
   const zonedDate = toZonedTime(date, REUNION_TIMEZONE);
   return format(zonedDate, "EEEE d MMMM yyyy 'à' HH'h'mm", { locale: fr });
+}
+
+/**
+ * Get all satellite image URLs from metadata list
+ */
+export function getSatelliteImageUrls(metadataList: SnapshotMetadata[]): string[] {
+  const urls: string[] = [];
+
+  for (const meta of metadataList) {
+    if (meta.satellite_ir108?.file) {
+      urls.push(getSatelliteImageUrl(meta.satellite_ir108.file));
+    }
+    if (meta.satellite_rgb_naturalenhncd?.file) {
+      urls.push(getSatelliteImageUrl(meta.satellite_rgb_naturalenhncd.file));
+    }
+  }
+
+  return urls;
 }
