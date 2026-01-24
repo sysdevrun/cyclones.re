@@ -42,14 +42,26 @@ const layerStyles: Record<LayerType, () => PaintRule | PaintRule[]> = {
       }),
     },
   ],
-  boundaries: () => ({
-    dataLayer: 'boundaries',
-    symbolizer: new LineSymbolizer({
-      color: '#333333',
-      width: 1,
-      opacity: 1,
-    }),
-  }),
+  boundaries: () => [
+    // White outline (wider, rendered first)
+    {
+      dataLayer: 'boundaries',
+      symbolizer: new LineSymbolizer({
+        color: 'rgba(255, 255, 255, 0.7)',
+        width: 3,
+        opacity: 1,
+      }),
+    },
+    // Dark stroke on top (thinner)
+    {
+      dataLayer: 'boundaries',
+      symbolizer: new LineSymbolizer({
+        color: '#333333',
+        width: 1,
+        opacity: 1,
+      }),
+    },
+  ],
 };
 
 export function PMTilesLayer({ url, layers, pane, zIndex }: PMTilesLayerProps) {
