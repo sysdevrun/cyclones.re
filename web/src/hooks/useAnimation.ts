@@ -7,7 +7,7 @@ interface UseAnimationOptions {
 
 export function useAnimation({ totalFrames, onFrameChange }: UseAnimationOptions) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isLooping, setIsLooping] = useState(true);
+  const [isLooping, setIsLooping] = useState(false);
   const [speed, setSpeed] = useState(200);
   const [currentIndex, setCurrentIndex] = useState(0);
   const intervalRef = useRef<number | null>(null);
