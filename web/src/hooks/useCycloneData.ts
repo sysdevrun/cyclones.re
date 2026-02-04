@@ -50,14 +50,12 @@ export function useCycloneData(): UseCycloneDataResult {
         // Find snapshots from the last 2 days to prefetch
         const snapshotsToPrefetch = data.filter((meta) => meta.timestamp >= twoDaysAgo);
 
-        // Find the default index: snapshot nearest to 2 days ago
-        let initialIndex = 0;
-        let minDiff = Infinity;
+        // Find the default index: first snapshot after 2 days ago
+        let initialIndex = data.length - 1; // fallback to last if all are older
         for (let i = 0; i < data.length; i++) {
-          const diff = Math.abs(data[i].timestamp - twoDaysAgo);
-          if (diff < minDiff) {
-            minDiff = diff;
+          if (data[i].timestamp >= twoDaysAgo) {
             initialIndex = i;
+            break;
           }
         }
         setDefaultIndex(initialIndex);
