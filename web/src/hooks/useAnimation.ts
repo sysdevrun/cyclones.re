@@ -80,6 +80,10 @@ export function useAnimation({ totalFrames, onFrameChange }: UseAnimationOptions
     pause();
   }, [totalFrames, pause]);
 
+  const setIndex = useCallback((index: number) => {
+    setCurrentIndex(Math.max(0, Math.min(index, totalFrames - 1)));
+  }, [totalFrames]);
+
   const updateSpeed = useCallback((newSpeed: number) => {
     setSpeed(newSpeed);
   }, []);
@@ -95,6 +99,7 @@ export function useAnimation({ totalFrames, onFrameChange }: UseAnimationOptions
     restart,
     toggleLoop,
     goToFrame,
+    setIndex,
     updateSpeed,
   };
 }

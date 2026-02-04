@@ -17,6 +17,7 @@ function App() {
     loadingMessage,
     loadingProgress,
     error,
+    defaultIndex,
     loadSnapshot,
   } = useCycloneData();
 
@@ -34,13 +35,14 @@ function App() {
     onFrameChange: handleFrameChange,
   });
 
-  // Auto-play animation when data is loaded
+  // Sync animation index to default index and auto-play when data is loaded
   useEffect(() => {
     if (!hasAutoPlayed && metadata.length > 0 && currentSnapshot && !isLoading) {
+      animation.setIndex(defaultIndex);
       animation.play();
       setHasAutoPlayed(true);
     }
-  }, [hasAutoPlayed, metadata.length, currentSnapshot, isLoading, animation]);
+  }, [hasAutoPlayed, metadata.length, currentSnapshot, isLoading, animation, defaultIndex]);
 
   const handleInitialFitDone = useCallback(() => {
     setHasInitiallyFitted(true);
