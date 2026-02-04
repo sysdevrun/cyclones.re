@@ -11,6 +11,7 @@ export function useAnimation({ totalFrames, onFrameChange }: UseAnimationOptions
   const [speed, setSpeed] = useState(200);
   const [currentIndex, setCurrentIndex] = useState(0);
   const intervalRef = useRef<number | null>(null);
+  const isInitializedRef = useRef(false);
 
   const clearAnimationInterval = useCallback(() => {
     if (intervalRef.current !== null) {
@@ -43,9 +44,11 @@ export function useAnimation({ totalFrames, onFrameChange }: UseAnimationOptions
     return clearAnimationInterval;
   }, [isPlaying, speed, animate, clearAnimationInterval, totalFrames]);
 
-  // Call onFrameChange when currentIndex changes
+  // Call onFrameChange when currentIndex changes (skip initial render)
   useEffect(() => {
-    onFrameChange(currentIndex);
+    if (isInitializedRef.current) {
+      onFrameChange(currentIndex);
+    }
   }, [currentIndex, onFrameChange]);
 
   const play = useCallback(() => {
@@ -81,6 +84,7 @@ export function useAnimation({ totalFrames, onFrameChange }: UseAnimationOptions
   }, [totalFrames, pause]);
 
   const setIndex = useCallback((index: number) => {
+    isInitializedRef.current = true;
     setCurrentIndex(Math.max(0, Math.min(index, totalFrames - 1)));
   }, [totalFrames]);
 
