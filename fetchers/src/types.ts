@@ -179,8 +179,9 @@ export interface SatelliteImage {
 export interface FetchSnapshot {
   timestamp: number;
   date: string;
-  cyclone_list: CycloneListResponse;
-  cyclone_list_file: string;
+  /** Null when the Meteo France API was unreachable for this run */
+  cyclone_list: CycloneListResponse | null;
+  cyclone_list_file: string | null;
   trajectory_files: string[];
   report_file: string | null;
   satellite_ir108: SatelliteImage | null;

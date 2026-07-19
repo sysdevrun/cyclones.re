@@ -170,44 +170,59 @@ async function main(): Promise<void> {
     console.log(`Timestamp: ${dateStr}`);
     console.log(`Output directory: ${dateDir}`);
 
-    // Fetch cyclone list
+    // Fetch cyclone list. A Meteo France outage must not abort the run: the
+    // EUMETSAT satellite images below are independent and still worth saving.
     console.log('\n1. Fetching cyclone list...');
-    const cycloneList: CycloneListResponse = await client.listCyclones(
-      BASIN,
-      season as `${number}${number}${number}${number}${number}${number}${number}${number}`
-    );
-
-    const cycloneIds = Object.keys(cycloneList.cyclone_list);
-    console.log(`   Found ${cycloneIds.length} cyclone(s): ${cycloneIds.map(id => cycloneList.cyclone_list[id].cyclone_name).join(', ') || 'none'}`);
+    let cycloneList: CycloneListResponse | null = null;
+    let cycloneIds: string[] = [];
+    try {
+      cycloneList = await client.listCyclones(
+        BASIN,
+        season as `${number}${number}${number}${number}${number}${number}${number}${number}`
+      );
+      cycloneIds = Object.keys(cycloneList.cyclone_list);
+      console.log(`   Found ${cycloneIds.length} cyclone(s): ${cycloneIds.map(id => cycloneList!.cyclone_list[id].cyclone_name).join(', ') || 'none'}`);
+    } catch (error) {
+      console.warn(`   Warning: Could not fetch cyclone list: ${error instanceof Error ? error.message : String(error)}`);
+    }
 
     // Save cyclone list
-    const cycloneListFile = path.join(dateDir, 'cyclone_list.json');
-    fs.writeFileSync(cycloneListFile, JSON.stringify(cycloneList, null, 2));
-    console.log(`   Saved to ${getRelativePath(cycloneListFile)}`);
+    let cycloneListFile: string | null = null;
+    if (cycloneList) {
+      const cycloneListPath = path.join(dateDir, 'cyclone_list.json');
+      fs.writeFileSync(cycloneListPath, JSON.stringify(cycloneList, null, 2));
+      cycloneListFile = getRelativePath(cycloneListPath);
+      console.log(`   Saved to ${cycloneListFile}`);
+    }
 
     // Fetch and save trajectories for each cyclone
     const trajectoryFiles: string[] = [];
     let trajectoryIndex = 2;
 
     for (const cycloneId of cycloneIds) {
-      const cyclone = cycloneList.cyclone_list[cycloneId];
+      const cyclone = cycloneList!.cyclone_list[cycloneId];
       console.log(`\n${trajectoryIndex}. Fetching trajectory for ${cyclone.cyclone_name} (${cycloneId})...`);
 
-      const trajectory: CycloneTrajectoryResponse = await client.getCycloneTrajectory(cycloneId);
+      // One unavailable trajectory must not drop the other cyclones or the imagery
+      try {
+        const trajectory: CycloneTrajectoryResponse = await client.getCycloneTrajectory(cycloneId);
 
-      const analysisCount = trajectory.cyclone_trajectory.features.filter(
-        f => f.properties.data_type === 'analysis'
-      ).length;
-      const forecastCount = trajectory.cyclone_trajectory.features.filter(
-        f => f.properties.data_type === 'forecast'
-      ).length;
-      console.log(`   Features: ${analysisCount} analysis, ${forecastCount} forecast`);
+        const analysisCount = trajectory.cyclone_trajectory.features.filter(
+          f => f.properties.data_type === 'analysis'
+        ).length;
+        const forecastCount = trajectory.cyclone_trajectory.features.filter(
+          f => f.properties.data_type === 'forecast'
+        ).length;
+        console.log(`   Features: ${analysisCount} analysis, ${forecastCount} forecast`);
 
-      // Save trajectory
-      const trajectoryFile = path.join(dateDir, `trajectory_${sanitizeCycloneId(cycloneId)}.json`);
-      fs.writeFileSync(trajectoryFile, JSON.stringify(trajectory, null, 2));
-      trajectoryFiles.push(getRelativePath(trajectoryFile));
-      console.log(`   Saved to ${getRelativePath(trajectoryFile)}`);
+        // Save trajectory
+        const trajectoryFile = path.join(dateDir, `trajectory_${sanitizeCycloneId(cycloneId)}.json`);
+        fs.writeFileSync(trajectoryFile, JSON.stringify(trajectory, null, 2));
+        trajectoryFiles.push(getRelativePath(trajectoryFile));
+        console.log(`   Saved to ${getRelativePath(trajectoryFile)}`);
+      } catch (error) {
+        console.warn(`   Warning: Could not fetch trajectory for ${cycloneId}: ${error instanceof Error ? error.message : String(error)}`);
+      }
 
       trajectoryIndex++;
     }
@@ -251,12 +266,19 @@ async function main(): Promise<void> {
       console.log(`   Saved to ${satelliteRgb.file}`);
     }
 
+    // Nothing at all came back: skip the snapshot rather than appending an
+    // empty entry to api_data.json every hour for the duration of an outage.
+    if (!cycloneList && !satelliteIr108 && !satelliteRgb) {
+      console.warn('\nWarning: no data could be fetched, skipping snapshot');
+      return;
+    }
+
     // Create snapshot metadata
     const snapshot: FetchSnapshot = {
       timestamp,
       date: dateStr,
       cyclone_list: cycloneList,
-      cyclone_list_file: getRelativePath(cycloneListFile),
+      cyclone_list_file: cycloneListFile,
       trajectory_files: trajectoryFiles,
       report_file: reportFile,
       satellite_ir108: satelliteIr108,

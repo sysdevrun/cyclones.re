@@ -11,7 +11,10 @@ import type {
 } from './types.js';
 
 const SESSION_URL = 'https://meteofrance.re/fr/cyclone';
-const API_BASE_URL = 'https://rpcache-aa.meteofrance.com/internet2018client/2.0';
+// rpcache-aa.meteofrance.com stopped accepting connections from this server on
+// 2026-04-13 (TCP 443 silently dropped); rwg is the host meteofrance.re itself uses.
+const API_BASE_URL = process.env.METEOFRANCE_API_BASE_URL ??
+  'https://rwg.meteofrance.com/internet2018client/2.0';
 
 export interface MeteoFranceClientOptions {
   /** Custom fetch implementation (useful for Node.js or testing) */
